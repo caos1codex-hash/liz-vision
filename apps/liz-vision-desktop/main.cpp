@@ -1,9 +1,10 @@
 // LIZ Vision — Desktop Application Entry Point
-// Sprint 1 Demo: Engine initialization, plugin registration, task execution.
+// Sprint 1+2 Demo: Engine, plugins, task system, and video pipeline.
 
 #include "engine/core/Engine.h"
 #include "engine/core/Logger.h"
 #include "engine/plugins/PluginInterface.h"
+#include "engine/video/VideoPipeline.h"
 
 #include <iostream>
 #include <memory>
@@ -40,7 +41,7 @@ private:
 int main() {
     std::cout << std::endl;
 
-    // 1. Create and initialize the Engine
+    // ── 1. Engine initialization (Sprint 1) ──────────────────────────────────
     liz::Engine engine;
     if (!engine.initialize()) {
         std::cerr << "Failed to initialize LIZ Vision Engine" << std::endl;
@@ -49,84 +50,40 @@ int main() {
 
     std::cout << std::endl;
 
-    // 2. Register a dummy plugin
-    auto plugin = std::make_shared<DummyPlugin>("Demo Upscaler", "upscaler");
-    engine.register_plugin(plugin);
-
-    auto plugin2 = std::make_shared<DummyPlugin>("Demo Detector", "detection");
-    engine.register_plugin(plugin2);
+    // ── 2. Register plugins (Sprint 1) ───────────────────────────────────────
+    engine.register_plugin(std::make_shared<DummyPlugin>("Demo Upscaler", "upscaler"));
+    engine.register_plugin(std::make_shared<DummyPlugin>("Demo Detector", "detection"));
 
     std::cout << std::endl;
 
-    // 3. List registered plugins
-    auto names = engine.plugin_manager().list_names();
+    // ── 3. Video Pipeline (Sprint 2) ─────────────────────────────────────────
+    liz::VideoPipeline pipeline;
+
+    liz::DecodeRequest req;
+    req.source_path    = "sample_video.mp4";  // simulated — not read from disk
+    req.target_width   = 320;                  // small for fast demo
+    req.target_height  = 240;
+    req.fps            = 24.0;
+    req.max_frames     = 8;
+
+    auto stats = pipeline.run(engine, req);
+
+    std::cout << std::endl;
+
+    // ── 4. Pipeline summary ──────────────────────────────────────────────────
     {
         std::ostringstream oss;
-        oss << "Registered plugins (" << names.size() << "): ";
-        for (std::size_t i = 0; i < names.size(); ++i) {
-            if (i > 0) oss << ", ";
-            oss << names[i];
-        }
+        oss << "Final stats: " << stats.frames_received << " frames, "
+            << stats.tasks_completed << "/" << stats.tasks_submitted << " tasks, "
+            << stats.tasks_failed << " failed, "
+            << "decode=" << stats.decode_time_ms << "ms, "
+            << "exec=" << stats.execution_time_ms << "ms";
         LIZ_INFO(oss.str());
     }
 
     std::cout << std::endl;
 
-    // 4. Submit dummy tasks
-    engine.submit_task("Initialize config",
-        []() {
-            LIZ_INFO("  -> Config check passed");
-            return true;
-        });
-
-    engine.submit_task("Load resources",
-        []() {
-            LIZ_INFO("  -> Resources loaded (simulated)");
-            return true;
-        });
-
-    engine.submit_task("Run pipeline step 1",
-        []() {
-            LIZ_INFO("  -> Pipeline step 1 done");
-            return true;
-        });
-
-    engine.submit_task("Run pipeline step 2",
-        []() {
-            LIZ_INFO("  -> Pipeline step 2 done");
-            return true;
-        });
-
-    // Submit a task that intentionally fails
-    engine.submit_task("Intentional failure demo",
-        []() {
-            LIZ_WARN("  -> This task will return false");
-            return false;
-        });
-
-    std::cout << std::endl;
-
-    // 5. Show pending count
-    {
-        std::ostringstream oss;
-        oss << "Pending tasks: " << engine.scheduler().pending_count();
-        LIZ_INFO(oss.str());
-    }
-
-    std::cout << std::endl;
-
-    // 6. Execute all pending tasks
-    auto executed = engine.run_pending();
-
-    {
-        std::ostringstream oss;
-        oss << "Executed " << executed << " tasks";
-        LIZ_INFO(oss.str());
-    }
-
-    std::cout << std::endl;
-
-    // 7. Shutdown
+    // ── 5. Shutdown ───────────────────────────────────────────────────────────
     engine.shutdown();
 
     std::cout << std::endl;

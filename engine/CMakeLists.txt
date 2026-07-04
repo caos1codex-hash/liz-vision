@@ -11,9 +11,12 @@ add_library(liz-engine
     scheduler/TaskQueue.cpp
     scheduler/Scheduler.cpp
     plugins/PluginManager.cpp
+    video/VideoFrame.cpp
+    video/VideoDecoder.cpp
+    video/VideoPipeline.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)
 
 # Future sprints will add:
-#   - video/, ai/, gpu/, memory/ subdirectories
+#   - ai/, gpu/, memory/ subdirectories
