@@ -25,6 +25,10 @@ enum class EventType {
     PluginUnloaded,
     ExportStarted,
     ExportFinished,
+    AssetCreated,
+    AssetLoaded,
+    AssetUnloaded,
+    AssetDestroyed,
     Custom
 };
 
@@ -47,6 +51,10 @@ inline const char* event_type_to_string(EventType type) {
         case EventType::PluginUnloaded:        return "PluginUnloaded";
         case EventType::ExportStarted:         return "ExportStarted";
         case EventType::ExportFinished:        return "ExportFinished";
+        case EventType::AssetCreated:          return "AssetCreated";
+        case EventType::AssetLoaded:           return "AssetLoaded";
+        case EventType::AssetUnloaded:         return "AssetUnloaded";
+        case EventType::AssetDestroyed:        return "AssetDestroyed";
         case EventType::Custom:                return "Custom";
     }
     return "Unknown";

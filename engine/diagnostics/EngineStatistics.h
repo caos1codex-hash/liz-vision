@@ -37,6 +37,10 @@ struct EngineStatistics {
     // -- GPU --
     std::size_t gpu_commands        = 0;
 
+    // -- Assets (Sprint 14) --
+    std::size_t assets_loaded      = 0;
+    std::size_t assets_active       = 0;
+
     /// Generate a formatted summary string.
     std::string to_string() const;
 };

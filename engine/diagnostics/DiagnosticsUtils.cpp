@@ -39,7 +39,9 @@ std::string EngineStatistics::to_string() const {
         << " plugins=" << plugins_active
         << " batches=" << batches_executed
         << " inferences=" << inferences_executed
-        << " gpu_commands=" << gpu_commands;
+        << " gpu_commands=" << gpu_commands
+        << " assets=" << assets_loaded
+        << " assets_active=" << assets_active;
     return oss.str();
 }
 

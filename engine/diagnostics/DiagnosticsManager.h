@@ -44,6 +44,10 @@ public:
     std::size_t inferences_executed = 0;
     std::size_t gpu_commands        = 0;
     double     total_runtime_ms     = 0.0;
+
+    // -- Assets (Sprint 14) --
+    std::size_t assets_loaded        = 0;
+    std::size_t assets_active        = 0;
 };
 
 /// Central diagnostics and profiling manager for the LIZ Vision engine.

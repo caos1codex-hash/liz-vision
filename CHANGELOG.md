@@ -4,6 +4,37 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 14 — Asset System Foundation (2026-07-05)
+
+Implemented the official asset management system for the engine.
+Manages reusable resources: videos, AI models, configurations, shaders,
+plugins, textures, serialized tensors, projects. All simulated — no
+filesystem access.
+
+**New module:** `engine/assets/`
+
+- `AssetType` — enum with 11 types (Unknown, Video, Image, Audio, Model, Tensor, Shader, Plugin, Configuration, Project, Temporary)
+- `AssetState` — 5 lifecycle states (Unloaded, Loading, Loaded, Unloading, Error)
+- `Asset` — base class with UUID, name, type, version, size, state transitions, timestamps, reference counting
+- `AssetHandle` — lightweight handle with UUID, name, type, valid(), acquire(), release()
+- `AssetDatabase` — in-memory database with insert, remove, find, find_by_name, exists, list, count, clear, statistics
+- `AssetManager` — central manager with create_asset, destroy_asset, load, unload, reload, find, statistics, clear, EventBus integration
+
+**Integration:**
+- Logger: all operations logged
+- EventBus: AssetCreated, AssetLoaded, AssetUnloaded, AssetDestroyed events
+- Service Registry: AssetManager registered as official service
+- Diagnostics: assets_loaded and assets_active shown in reports
+- EventType: 4 new event types added (backward compatible)
+
+**Refactoring:** Introduced DemoRunner pattern. All demo logic moved to
+`apps/liz-vision-desktop/demo/`. main.cpp now only initializes Engine
+and delegates to DemoRunner implementations.
+
+**Commit:** `Implement Asset System Foundation (Sprint 14)`
+
+---
+
 ## Sprint 13 — Diagnostics & Profiler Foundation (2026-07-05)
 
 Implemented the official diagnostics and profiling system for the engine.

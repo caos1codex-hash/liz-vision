@@ -1,4 +1,12 @@
 # apps/liz-vision-desktop/CMakeLists.txt
 
-add_executable(liz-vision-desktop main.cpp)
+set(DEMO_SOURCES
+    main.cpp
+    demo/DemoRunner.cpp
+    demo/LegacyDemo.cpp
+    demo/Sprint14Demo.cpp
+)
+
+add_executable(liz-vision-desktop ${DEMO_SOURCES})
+target_include_directories(liz-vision-desktop PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(liz-vision-desktop PRIVATE liz-engine)

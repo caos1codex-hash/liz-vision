@@ -54,6 +54,10 @@ add_library(liz-engine
     diagnostics/Profiler.cpp
     diagnostics/DiagnosticsManager.cpp
     diagnostics/DiagnosticsUtils.cpp
+    assets/Asset.cpp
+    assets/AssetHandle.cpp
+    assets/AssetDatabase.cpp
+    assets/AssetManager.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)
