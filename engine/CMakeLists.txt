@@ -14,9 +14,12 @@ add_library(liz-engine
     video/VideoFrame.cpp
     video/VideoDecoder.cpp
     video/VideoPipeline.cpp
+    ai/AIProcessor.cpp
+    ai/AIContext.cpp
+    ai/AIPipeline.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)
 
 # Future sprints will add:
-#   - ai/, gpu/, memory/ subdirectories
+#   - gpu/, memory/ subdirectories
