@@ -1,0 +1,69 @@
+# ── Build artifacts ──────────────────────────────────────────────────────────
+build/
+cmake-build-*/
+out/
+
+# ── Compiled objects ─────────────────────────────────────────────────────────
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# ── CMake cache ──────────────────────────────────────────────────────────────
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake.in
+!cmake/
+!cmake/**
+
+# ── IDE files ────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.clangd/
+compile_commands.json
+
+# ── OS files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.directory
+
+# ── AI model weights (large binary files) ───────────────────────────────────
+models/*.onnx
+models/*.pt
+models/*.pth
+models/*.bin
+models/*.engine
+models/*.trt
+models/*.safetensors
+!models/.gitkeep
+!models/**/*.md
+
+# ── Video / media assets (large files) ───────────────────────────────────────
+assets/video/
+assets/images/sample_*
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.wmv
+!assets/.gitkeep
+!assets/**/*.md
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+
+# ── Dependencies (vendored) ─────────────────────────────────────────────────
+third_party/*/build/
+third_party/*/.git/
+
+# ── Package managers ─────────────────────────────────────────────────────────
+package-lock.json
+node_modules/
