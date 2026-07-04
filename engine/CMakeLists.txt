@@ -4,6 +4,7 @@
 
 add_library(liz-engine
     core/Logger.cpp
+    core/Config.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)
@@ -11,7 +12,6 @@ target_compile_features(liz-engine PUBLIC cxx_std_20)
 # Future sprints will add:
 #   - core/Engine.cpp
 #   - core/EngineContext.cpp
-#   - core/Config.cpp
 #   - scheduler/TaskQueue.cpp
 #   - scheduler/Scheduler.cpp
 #   - plugins/PluginManager.cpp
