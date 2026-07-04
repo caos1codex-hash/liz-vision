@@ -1,8 +1,9 @@
 // LIZ Vision — Desktop Application Entry Point
-// Sprint 1+2+3+4+5+6+7+8+9 Demo: Engine, video pipeline, AI pipeline,
+// Sprint 1-12 Demo: Engine, video pipeline, AI pipeline,
 //   GPU routing, streaming, inference layer, performance layer,
 //   GPU execution layer (FIFO), tensor + batch processing layer,
-//   resource management foundation.
+//   resource management foundation, runtime architecture, event bus,
+//   service registry foundation.
 
 #include "engine/core/Engine.h"
 #include "engine/core/Logger.h"
@@ -32,6 +33,10 @@
 #include "engine/performance/TaskExecutor.h"
 #include "engine/performance/BatchProcessor.h"
 #include "engine/performance/PerformanceManager.h"
+#include "engine/services/ServiceType.h"
+#include "engine/services/Service.h"
+#include "engine/services/ServiceRegistry.h"
+#include "engine/services/ServiceLocator.h"
 
 #include <iostream>
 #include <memory>
@@ -647,6 +652,148 @@ int main() {
             << "     -> Runtime (lifecycle controller)" << std::endl
             << "     -> EventBus (module communication)";
         LIZ_INFO(oss.str());
+    }
+
+    std::cout << std::endl;
+
+    // -- 18. Service Registry Foundation (Sprint 12 — NEW) ---------------------
+    LIZ_INFO("--- Service Registry Foundation (Sprint 12) ---");
+
+    {
+        liz::ServiceRegistry registry;
+
+        // 18a. Register example services.
+        LIZ_INFO("Registering services...");
+        registry.register_service("Logger",          liz::ServiceType::Logger,          "1.0.0");
+        registry.register_service("Runtime",         liz::ServiceType::Runtime,         "1.0.0");
+        registry.register_service("EventBus",        liz::ServiceType::EventBus,        "1.0.0");
+        registry.register_service("ResourceManager", liz::ServiceType::ResourceManager, "1.0.0");
+        registry.register_service("Scheduler",       liz::ServiceType::Scheduler,       "1.0.0");
+        registry.register_service("GPU",             liz::ServiceType::GPU,             "1.0.0");
+        registry.register_service("Inference",       liz::ServiceType::Inference,       "1.0.0");
+        registry.register_service("Video",           liz::ServiceType::Video,           "1.0.0");
+        registry.register_service("Performance",     liz::ServiceType::Performance,     "1.0.0");
+        registry.register_service("PluginManager",   liz::ServiceType::PluginManager,   "1.0.0");
+
+        std::cout << std::endl;
+
+        // 18b. Query some services.
+        LIZ_INFO("Querying services...");
+        {
+            auto* logger_svc = registry.find("Logger");
+            if (logger_svc) {
+                std::ostringstream oss;
+                oss << "  found: " << logger_svc->info();
+                LIZ_INFO(oss.str());
+            }
+        }
+        {
+            auto* gpu_svc = registry.find("GPU");
+            if (gpu_svc) {
+                std::ostringstream oss;
+                oss << "  found: " << gpu_svc->info();
+                LIZ_INFO(oss.str());
+            }
+        }
+        {
+            auto* missing = registry.find("NonExistent");
+            std::ostringstream oss;
+            oss << "  find('NonExistent'): " << (missing ? "found" : "nullptr");
+            LIZ_INFO(oss.str());
+        }
+
+        std::cout << std::endl;
+
+        // 18c. Test duplicate rejection.
+        LIZ_INFO("Testing duplicate rejection...");
+        registry.register_service("Logger", liz::ServiceType::Logger, "2.0.0");
+
+        std::cout << std::endl;
+
+        // 18d. List all services.
+        LIZ_INFO("Listing all registered services:");
+        auto names = registry.list();
+        for (const auto& n : names) {
+            auto* svc = registry.find(n);
+            std::ostringstream oss;
+            oss << "  - " << svc->info();
+            LIZ_INFO(oss.str());
+        }
+
+        std::cout << std::endl;
+
+        // 18e. ServiceLocator demo.
+        LIZ_INFO("ServiceLocator demo:");
+        liz::ServiceLocator::init(&registry);
+
+        {
+            auto* svc = liz::ServiceLocator::get("Runtime");
+            if (svc) {
+                std::ostringstream oss;
+                oss << "  get('Runtime'): " << svc->info();
+                LIZ_INFO(oss.str());
+            }
+        }
+
+        {
+            auto* svc = liz::ServiceLocator::get_by_type(liz::ServiceType::EventBus);
+            if (svc) {
+                std::ostringstream oss;
+                oss << "  get_by_type(EventBus): " << svc->info();
+                LIZ_INFO(oss.str());
+            }
+        }
+
+        {
+            auto* svc = liz::ServiceLocator::get_by_type(liz::ServiceType::Video);
+            if (svc) {
+                std::ostringstream oss;
+                oss << "  get_by_type(Video): " << svc->info();
+                LIZ_INFO(oss.str());
+            }
+        }
+
+        std::cout << std::endl;
+
+        // 18f. Remove one service.
+        LIZ_INFO("Unregistering 'Scheduler'...");
+        registry.unregister_service("Scheduler");
+
+        std::cout << std::endl;
+
+        // 18g. Final statistics.
+        LIZ_INFO("Final statistics:");
+        registry.log_statistics();
+
+        // 18h. Verify state transitions on a service.
+        LIZ_INFO("Service state transitions demo:");
+        {
+            auto* perf_svc = registry.find("Performance");
+            if (perf_svc) {
+                perf_svc->initialize();
+                std::ostringstream oss;
+                oss << "  After initialize: " << perf_svc->info();
+                LIZ_INFO(oss.str());
+
+                perf_svc->start();
+                oss.str("");
+                oss << "  After start:      " << perf_svc->info();
+                LIZ_INFO(oss.str());
+
+                perf_svc->stop();
+                oss.str("");
+                oss << "  After stop:       " << perf_svc->info();
+                LIZ_INFO(oss.str());
+
+                perf_svc->destroy();
+                oss.str("");
+                oss << "  After destroy:    " << perf_svc->info();
+                LIZ_INFO(oss.str());
+            }
+        }
+
+        // 18i. Unbind locator.
+        liz::ServiceLocator::reset();
     }
 
     std::cout << std::endl;
