@@ -20,6 +20,10 @@ add_library(liz-engine
     ai/AIPipeline.cpp
     gpu/GPUDevice.cpp
     gpu/GPUContext.cpp
+    ai/inference/Model.cpp
+    ai/inference/ModelLoader.cpp
+    ai/inference/InferenceEngine.cpp
+    ai/models/ModelRegistry.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)
