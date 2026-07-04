@@ -2,14 +2,17 @@
 # Core engine library — all processing modules live here.
 # This module must NEVER depend on apps/ (architecture rule).
 
-add_library(liz-engine INTERFACE)
-target_include_directories(liz-engine INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(liz-engine
+    core/Logger.cpp
+)
+target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
+target_compile_features(liz-engine PUBLIC cxx_std_20)
 
 # Future sprints will add:
-#   - add_subdirectory(core)
-#   - add_subdirectory(video)
-#   - add_subdirectory(ai)
-#   - add_subdirectory(gpu)
-#   - add_subdirectory(plugins)
-#   - add_subdirectory(memory)
-#   - add_subdirectory(scheduler)
+#   - core/Engine.cpp
+#   - core/EngineContext.cpp
+#   - core/Config.cpp
+#   - scheduler/TaskQueue.cpp
+#   - scheduler/Scheduler.cpp
+#   - plugins/PluginManager.cpp
+#   - video/, ai/, gpu/, memory/ subdirectories
