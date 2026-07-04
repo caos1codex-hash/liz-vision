@@ -39,6 +39,13 @@ enum class EventType {
     ProjectSaved,
     ProjectClosed,
     ProjectDestroyed,
+    WorkspaceCreated,
+    WorkspaceOpened,
+    WorkspaceActivated,
+    WorkspaceClosed,
+    WorkspaceDestroyed,
+    ProjectAddedToWorkspace,
+    ProjectRemovedFromWorkspace,
     Custom
 };
 
@@ -75,6 +82,13 @@ inline const char* event_type_to_string(EventType type) {
         case EventType::ProjectSaved:            return "ProjectSaved";
         case EventType::ProjectClosed:          return "ProjectClosed";
         case EventType::ProjectDestroyed:        return "ProjectDestroyed";
+        case EventType::WorkspaceCreated:        return "WorkspaceCreated";
+        case EventType::WorkspaceOpened:          return "WorkspaceOpened";
+        case EventType::WorkspaceActivated:       return "WorkspaceActivated";
+        case EventType::WorkspaceClosed:          return "WorkspaceClosed";
+        case EventType::WorkspaceDestroyed:        return "WorkspaceDestroyed";
+        case EventType::ProjectAddedToWorkspace:  return "ProjectAddedToWorkspace";
+        case EventType::ProjectRemovedFromWorkspace: return "ProjectRemovedFromWorkspace";
         case EventType::Custom:                return "Custom";
     }
     return "Unknown";

@@ -23,6 +23,7 @@ class DiagnosticsDataProvider;
 class PipelineExecutor;
 class PipelineGraph;
 class ProjectManager;
+class WorkspaceManager;
 
 /// Public API facade for the LIZ Engine.
 ///
@@ -141,6 +142,38 @@ public:
     /// List all projects.
     ProjectInfoList list_projects() const;
 
+    // ── Workspace info ──────────────────────────────────────────────
+
+    /// Create a new workspace with the given name.
+    ApiResult create_workspace(const std::string& name, WorkspaceInfo& out_info);
+
+    /// Open a workspace by UUID.
+    ApiResult open_workspace(const std::string& uuid);
+
+    /// Close a workspace by UUID.
+    ApiResult close_workspace(const std::string& uuid);
+
+    /// Destroy a workspace by UUID.
+    ApiResult destroy_workspace(const std::string& uuid);
+
+    /// Set the active workspace by UUID.
+    ApiResult set_active_workspace(const std::string& uuid);
+
+    /// Get the active workspace info.  Returns NotFound if none.
+    ApiResult active_workspace(WorkspaceInfo& out_info) const;
+
+    /// Get workspace system statistics.
+    ApiWorkspaceStatistics workspace_statistics() const;
+
+    /// List all workspaces.
+    WorkspaceInfoList list_workspaces() const;
+
+    /// Add a project to a workspace.
+    ApiResult add_project_to_workspace(const std::string& workspace_uuid, const std::string& project_uuid);
+
+    /// Remove a project from a workspace.
+    ApiResult remove_project_from_workspace(const std::string& workspace_uuid, const std::string& project_uuid);
+
 private:
     // Internal engine — never exposed.
     std::unique_ptr<Engine>                engine_;
@@ -151,6 +184,7 @@ private:
     std::unique_ptr<DiagnosticsDataProvider> data_provider_;
     std::unique_ptr<PipelineExecutor>         pipeline_executor_;
     std::unique_ptr<ProjectManager>            project_manager_;
+    std::unique_ptr<WorkspaceManager>          workspace_manager_;
 
     // Public sessions.
     std::vector<std::unique_ptr<EngineSession>> sessions_;

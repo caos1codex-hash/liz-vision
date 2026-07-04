@@ -17,6 +17,9 @@
 #include "engine/project/ProjectManager.h"
 #include "engine/project/Project.h"
 #include "engine/project/ProjectTypes.h"
+#include "engine/workspace/WorkspaceManager.h"
+#include "engine/workspace/Workspace.h"
+#include "engine/workspace/WorkspaceTypes.h"
 
 #include <algorithm>
 #include <chrono>
@@ -125,7 +128,17 @@ ApiResult EngineAPI::initialize(const EngineBuilder& config) {
 
     service_registry_->register_service("ProjectManager", ServiceType::ProjectManager, "1.0.0");
 
-    // 8. Create an implicit default session.
+    // 8. Create WorkspaceManager.
+    workspace_manager_ = std::make_unique<WorkspaceManager>();
+    workspace_manager_->initialize();
+
+    if (event_bus_) {
+        workspace_manager_->set_event_bus(event_bus_.get());
+    }
+
+    service_registry_->register_service("WorkspaceManager", ServiceType::WorkspaceManager, "1.0.0");
+
+    // 9. Create an implicit default session.
     SessionInfo default_session;
     create_session(default_session);
 
@@ -150,6 +163,11 @@ ApiResult EngineAPI::shutdown() {
     if (project_manager_) {
         project_manager_->shutdown();
         project_manager_.reset();
+    }
+
+    if (workspace_manager_) {
+        workspace_manager_->shutdown();
+        workspace_manager_.reset();
     }
 
     if (pipeline_executor_) {
@@ -555,6 +573,173 @@ ProjectInfoList EngineAPI::list_projects() const {
         }
     }
     return result;
+}
+
+// ── Workspace info ──────────────────────────────────────────────────
+
+ApiResult EngineAPI::create_workspace(const std::string& name, WorkspaceInfo& out_info) {
+    if (!initialized_) return ApiResult::Failed;
+
+    auto* ws = workspace_manager_->create_workspace(name);
+    if (!ws) {
+        return ApiResult::AlreadyExists;
+    }
+
+    out_info.uuid     = ws->uuid();
+    out_info.name     = ws->name();
+    out_info.state    = workspace_state_to_string(ws->state());
+    out_info.projects = ws->project_count();
+
+    std::ostringstream oss;
+    oss << "EngineAPI: workspace created — name=" << name;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::open_workspace(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!workspace_manager_->open_workspace(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: workspace opened — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::close_workspace(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!workspace_manager_->close_workspace(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: workspace closed — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::destroy_workspace(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!workspace_manager_->destroy_workspace(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: workspace destroyed — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::set_active_workspace(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!workspace_manager_->set_active_workspace(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: active workspace set — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::active_workspace(WorkspaceInfo& out_info) const {
+    if (!workspace_manager_) return ApiResult::Failed;
+
+    auto* ws = workspace_manager_->active_workspace();
+    if (!ws) {
+        return ApiResult::NotFound;
+    }
+
+    out_info.uuid     = ws->uuid();
+    out_info.name     = ws->name();
+    out_info.state    = workspace_state_to_string(ws->state());
+    out_info.projects = ws->project_count();
+
+    return ApiResult::Success;
+}
+
+ApiWorkspaceStatistics EngineAPI::workspace_statistics() const {
+    ApiWorkspaceStatistics stats;
+
+    if (!workspace_manager_) return stats;
+
+    auto ws_stats = workspace_manager_->statistics();
+    stats.workspaces_created = ws_stats.workspaces_created;
+    stats.workspaces_open    = ws_stats.workspaces_open;
+    stats.active_workspace   = ws_stats.active_workspace;
+    stats.projects_loaded   = ws_stats.projects_loaded;
+    stats.assets_loaded     = ws_stats.assets_loaded;
+    stats.pipelines_loaded  = ws_stats.pipelines_loaded;
+    stats.runtime_seconds   = ws_stats.runtime_seconds;
+
+    // Populate from existing subsystems.
+    if (asset_manager_) {
+        auto asset_stats = asset_manager_->statistics();
+        stats.assets_loaded = asset_stats.active_assets;
+    }
+    if (pipeline_executor_) {
+        stats.pipelines_loaded = pipeline_executor_->pipeline_count();
+    }
+
+    return stats;
+}
+
+WorkspaceInfoList EngineAPI::list_workspaces() const {
+    WorkspaceInfoList result;
+    if (!workspace_manager_) return result;
+
+    auto names = workspace_manager_->list_workspaces();
+    for (const auto& name : names) {
+        auto* ws = workspace_manager_->find_workspace_by_name(name);
+        if (ws) {
+            WorkspaceInfo info;
+            info.uuid     = ws->uuid();
+            info.name     = ws->name();
+            info.state    = workspace_state_to_string(ws->state());
+            info.projects = ws->project_count();
+            result.push_back(info);
+        }
+    }
+    return result;
+}
+
+ApiResult EngineAPI::add_project_to_workspace(const std::string& workspace_uuid, const std::string& project_uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!workspace_manager_->add_project(workspace_uuid, project_uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: project added to workspace";
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::remove_project_from_workspace(const std::string& workspace_uuid, const std::string& project_uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!workspace_manager_->remove_project(workspace_uuid, project_uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: project removed from workspace";
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
 }
 
 } // namespace liz

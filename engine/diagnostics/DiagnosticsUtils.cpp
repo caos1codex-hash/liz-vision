@@ -46,7 +46,10 @@ std::string EngineStatistics::to_string() const {
         << " pipeline_nodes=" << pipeline_nodes
         << " active_project=" << active_project
         << " open_projects=" << open_projects
-        << " saved_projects=" << saved_projects;
+        << " saved_projects=" << saved_projects
+        << " active_workspace=" << active_workspace
+        << " loaded_workspaces=" << loaded_workspaces
+        << " workspace_projects=" << workspace_projects;
     return oss.str();
 }
 

@@ -52,6 +52,11 @@ struct EngineStatistics {
     std::size_t open_projects        = 0;
     std::size_t saved_projects       = 0;
 
+    // -- Workspaces (Sprint 18) --
+    std::size_t active_workspace     = 0;
+    std::size_t loaded_workspaces    = 0;
+    std::size_t workspace_projects   = 0;
+
     /// Generate a formatted summary string.
     std::string to_string() const;
 };

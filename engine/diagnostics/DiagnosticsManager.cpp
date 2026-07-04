@@ -91,6 +91,9 @@ EngineStatistics DiagnosticsManager::statistics() const {
         stats.active_project       = provider_->active_project;
         stats.open_projects        = provider_->open_projects;
         stats.saved_projects       = provider_->saved_projects;
+        stats.active_workspace     = provider_->active_workspace;
+        stats.loaded_workspaces    = provider_->loaded_workspaces;
+        stats.workspace_projects   = provider_->workspace_projects;
     }
 
     return stats;
@@ -131,6 +134,7 @@ void DiagnosticsManager::print_report() const {
     oss << "  Assets:        " << stats.assets_loaded << " (" << stats.assets_active << " active)" << std::endl;
     oss << "  Pipelines:     " << stats.pipelines_active << " active (" << stats.pipeline_nodes << " nodes)" << std::endl;
     oss << "  Projects:      " << stats.active_project << " active (" << stats.open_projects << " open, " << stats.saved_projects << " saved)" << std::endl;
+    oss << "  Workspaces:    " << stats.active_workspace << " active (" << stats.loaded_workspaces << " loaded, " << stats.workspace_projects << " projects)" << std::endl;
 
     // Latest snapshot performance metrics.
     oss << std::endl;

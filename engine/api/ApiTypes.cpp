@@ -35,4 +35,18 @@ std::string ApiProjectStatistics::to_string() const {
     return oss.str();
 }
 
+std::string ApiWorkspaceStatistics::to_string() const {
+    std::ostringstream oss;
+    oss << "WorkspaceStatistics{"
+        << "created=" << workspaces_created
+        << ", open=" << workspaces_open
+        << ", active=" << active_workspace
+        << ", projects=" << projects_loaded
+        << ", assets=" << assets_loaded
+        << ", pipelines=" << pipelines_loaded
+        << ", runtime=" << std::fixed << std::setprecision(1) << runtime_seconds << "s"
+        << "}";
+    return oss.str();
+}
+
 } // namespace liz

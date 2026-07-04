@@ -121,10 +121,33 @@ struct ApiProjectStatistics {
     std::string to_string() const;
 };
 
+/// Workspace information exposed through the public API.
+struct WorkspaceInfo {
+    std::string uuid;
+    std::string name;
+    std::string state;
+    std::size_t projects = 0;
+};
+
+/// Workspace statistics exposed through the public API.
+struct ApiWorkspaceStatistics {
+    std::size_t workspaces_created = 0;
+    std::size_t workspaces_open     = 0;
+    std::size_t active_workspace   = 0;
+    std::size_t projects_loaded    = 0;
+    std::size_t assets_loaded      = 0;
+    std::size_t pipelines_loaded   = 0;
+    double     runtime_seconds     = 0.0;
+
+    /// Generate a formatted summary string.
+    std::string to_string() const;
+};
+
 /// List of service/asset infos returned by query methods.
 using ServiceInfoList = std::vector<ServiceInfo>;
 using AssetInfoList   = std::vector<AssetInfo>;
 using PipelineInfoList = std::vector<PipelineInfo>;
 using ProjectInfoList = std::vector<ProjectInfo>;
+using WorkspaceInfoList = std::vector<WorkspaceInfo>;
 
 } // namespace liz

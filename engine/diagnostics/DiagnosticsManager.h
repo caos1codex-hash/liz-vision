@@ -59,6 +59,11 @@ public:
     std::size_t active_project       = 0;
     std::size_t open_projects        = 0;
     std::size_t saved_projects       = 0;
+
+    // -- Workspaces (Sprint 18) --
+    std::size_t active_workspace     = 0;
+    std::size_t loaded_workspaces    = 0;
+    std::size_t workspace_projects   = 0;
 };
 
 /// Central diagnostics and profiling manager for the LIZ Vision engine.

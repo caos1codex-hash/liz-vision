@@ -4,6 +4,56 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 18 — Workspace Foundation (2026-07-05)
+
+Implemented the Workspace system for the LIZ Vision engine. A Workspace
+represents the complete user working environment, capable of containing
+multiple projects, layouts, and preferences. Everything is in-memory
+only — no persistence.
+
+**New module:** `engine/workspace/`
+
+- `WorkspaceTypes` — enum `WorkspaceState` (4 states: Created, Opened, Active, Closed) with inline string converter
+- `WorkspaceLayout` — logical layout: panels, active panel, position, size, visibility (no GUI)
+- `WorkspacePreferences` — user settings: theme, language, autosave, GPU, diagnostics, auto-validate, threads, batch size, recent projects limit
+- `WorkspaceStatistics` — cumulative stats: workspaces created/open, active workspace, projects/assets/pipelines loaded, runtime
+- `Workspace` — core workspace with UUID, name, state, timestamps, project list, layout, preferences
+- `WorkspaceManager` — central lifecycle manager: create, open, close, destroy, set_active, add/remove project, list, statistics, EventBus integration
+
+**Integration:**
+
+- EventBus: 7 new events (WorkspaceCreated, WorkspaceOpened, WorkspaceActivated, WorkspaceClosed, WorkspaceDestroyed, ProjectAddedToWorkspace, ProjectRemovedFromWorkspace)
+- Service Registry: WorkspaceManager registered as official service (ServiceType::WorkspaceManager)
+- Diagnostics: active_workspace, loaded_workspaces, workspace_projects shown in EngineStatistics and DiagnosticsManager reports
+- Public API: `create_workspace()`, `open_workspace()`, `close_workspace()`, `destroy_workspace()`, `set_active_workspace()`, `active_workspace()`, `workspace_statistics()`, `list_workspaces()`, `add_project_to_workspace()`, `remove_project_from_workspace()`
+- ApiTypes: new `WorkspaceInfo`, `ApiWorkspaceStatistics`, `WorkspaceInfoList` types
+
+**Architecture:**
+
+```
+Application
+    |
+    v
+Public API (EngineBuilder / EngineAPI / EngineSession)
+    |
+    v
+WorkspaceManager (lifecycle)
+    |
+    v
+Workspace (projects + layout + preferences)
+    |
+    v
+ProjectManager, PipelineGraph, AssetManager (existing subsystems)
+```
+
+**Backward compatibility:**
+- All sprints 1-17 fully functional
+- LegacyDemo, Sprint14Demo, Sprint15Demo, Sprint16Demo, Sprint17Demo unmodified
+
+**Commit:** `Implement Workspace Foundation (Sprint 18)`
+
+---
+
 ## Sprint 17 — Project System Foundation (2026-07-05)
 
 Implemented the official Project system for the LIZ Vision engine.

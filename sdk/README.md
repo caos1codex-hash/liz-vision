@@ -286,3 +286,56 @@ api.destroy_project(proj_info.uuid);
 | `Modified` | Project has unsaved changes |
 | `Saved` | Project has been saved |
 | `Closed` | Project is closed |
+
+## Workspace System
+
+The Workspace System manages the complete user working environment.
+Each workspace can contain multiple projects, has its own layout
+configuration and user preferences. Workspaces integrate with
+projects, pipelines, assets, and diagnostics.
+
+### Creating a Workspace via Public API
+
+```cpp
+// Create a workspace.
+liz::WorkspaceInfo ws_info;
+api.create_workspace("My Studio", ws_info);
+
+// Open and activate the workspace.
+api.open_workspace(ws_info.uuid);
+api.set_active_workspace(ws_info.uuid);
+
+// Add a project to the workspace.
+api.create_project("Video Project", proj_info);
+api.add_project_to_workspace(ws_info.uuid, proj_info.uuid);
+
+// Close the workspace.
+api.close_workspace(ws_info.uuid);
+
+// Destroy the workspace.
+api.destroy_workspace(ws_info.uuid);
+```
+
+### Workspace API (EngineAPI)
+
+| Method | Description |
+|--------|-------------|
+| `create_workspace(name, info)` | Create a new workspace |
+| `open_workspace(uuid)` | Open a workspace |
+| `close_workspace(uuid)` | Close a workspace |
+| `destroy_workspace(uuid)` | Destroy a workspace |
+| `set_active_workspace(uuid)` | Set the active workspace |
+| `active_workspace(info)` | Get the active workspace |
+| `workspace_statistics()` | Get workspace system statistics |
+| `list_workspaces()` | List all workspaces |
+| `add_project_to_workspace(ws_uuid, proj_uuid)` | Add a project to a workspace |
+| `remove_project_from_workspace(ws_uuid, proj_uuid)` | Remove a project from a workspace |
+
+### Workspace States
+
+| State | Description |
+|-------|-------------|
+| `Created` | Workspace has been created |
+| `Opened` | Workspace is open |
+| `Active` | Workspace is the active one |
+| `Closed` | Workspace is closed |
