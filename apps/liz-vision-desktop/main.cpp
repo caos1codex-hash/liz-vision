@@ -23,6 +23,7 @@
 #include "engine/gpu/batch/BatchProcessorGPU.h"
 #include "engine/resources/ResourceManager.h"
 #include "engine/resources/ResourceHandle.h"
+#include "engine/runtime/Runtime.h"
 #include "engine/performance/ThreadPool.h"
 #include "engine/performance/FrameQueue.h"
 #include "engine/performance/TaskExecutor.h"
@@ -417,16 +418,101 @@ int main() {
 
     std::cout << std::endl;
 
-    // -- 14. Performance Summary -----------------------------------------------
+    // -- 14. Runtime Architecture Foundation (Sprint 10 — NEW) ----------------
+    LIZ_INFO("--- Runtime Architecture Foundation (Sprint 10) ---");
+
+    {
+        liz::Runtime runtime;
+
+        // Show initial state.
+        LIZ_INFO("Runtime created");
+        runtime.status();
+
+        std::cout << std::endl;
+
+        // Initialize: Created -> Initializing -> Ready.
+        if (!runtime.initialize()) {
+            LIZ_ERROR("Runtime initialization failed");
+            return 1;
+        }
+
+        std::cout << std::endl;
+        runtime.status();
+
+        std::cout << std::endl;
+
+        // Run: Ready -> Running.
+        LIZ_INFO("--- Run ---");
+        runtime.run();
+        runtime.status();
+
+        std::cout << std::endl;
+
+        // Pause: Running -> Paused.
+        LIZ_INFO("--- Pause ---");
+        runtime.pause();
+        runtime.status();
+
+        std::cout << std::endl;
+
+        // Resume: Paused -> Running.
+        LIZ_INFO("--- Resume ---");
+        runtime.resume();
+        runtime.status();
+
+        std::cout << std::endl;
+
+        // Invalid transition test: try to initialize again (should fail).
+        LIZ_INFO("--- Invalid transition test ---");
+        if (!runtime.initialize()) {
+            LIZ_WARN("Correctly rejected: initialize() while Running");
+        }
+
+        // Invalid: try to go Running -> Ready.
+        if (!runtime.pause()) {
+            // Already tested pause from Running, so pause first then try run->ready
+        }
+        runtime.pause();
+        runtime.status();
+
+        // Try to initialize while Paused (should fail).
+        if (!runtime.initialize()) {
+            LIZ_WARN("Correctly rejected: initialize() while Paused");
+        }
+
+        std::cout << std::endl;
+
+        // Resume before shutdown.
+        runtime.resume();
+
+        std::cout << std::endl;
+
+        // Shutdown: Running -> Stopping -> Stopped.
+        LIZ_INFO("--- Shutdown ---");
+        runtime.shutdown();
+        runtime.status();
+
+        std::cout << std::endl;
+
+        // Invalid: try to run after stopped (should fail).
+        LIZ_INFO("--- Post-shutdown invalid transition test ---");
+        if (!runtime.run()) {
+            LIZ_WARN("Correctly rejected: run() after Stopped");
+        }
+    }
+
+    std::cout << std::endl;
+
+    // -- 15. Performance Summary -----------------------------------------------
     perf_mgr.log_summary();
 
     std::cout << std::endl;
 
-    // -- 15. Full Pipeline Summary (Sprint 9) ----------------------------------
+    // -- 16. Full Pipeline Summary (Sprint 10) ----------------------------------
     {
         std::ostringstream oss;
         oss << "============================================" << std::endl
-            << "  FULL PIPELINE SUMMARY (Sprint 8)" << std::endl
+            << "  FULL PIPELINE SUMMARY (Sprint 10)" << std::endl
             << "============================================" << std::endl
             << "  GPU Backend:       " << gpu_ctx.backend_name()
             << " (" << gpu_ctx.device_info() << ")" << std::endl
@@ -445,7 +531,8 @@ int main() {
             << "     -> GPU Compute Engine (batch-aware FIFO)" << std::endl
             << "     -> AI Inference Engine" << std::endl
             << "     -> Optimized Video Output" << std::endl
-            << "     -> Resource Manager (centralized)";
+            << "     -> Resource Manager (centralized)" << std::endl
+            << "     -> Runtime (lifecycle controller)";
         LIZ_INFO(oss.str());
     }
 
