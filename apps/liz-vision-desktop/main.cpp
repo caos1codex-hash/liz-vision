@@ -1,9 +1,9 @@
 // LIZ Vision — Desktop Application Entry Point
-// Sprint 1-12 Demo: Engine, video pipeline, AI pipeline,
+// Sprint 1-13 Demo: Engine, video pipeline, AI pipeline,
 //   GPU routing, streaming, inference layer, performance layer,
 //   GPU execution layer (FIFO), tensor + batch processing layer,
 //   resource management foundation, runtime architecture, event bus,
-//   service registry foundation.
+//   service registry foundation, diagnostics & profiler.
 
 #include "engine/core/Engine.h"
 #include "engine/core/Logger.h"
@@ -37,6 +37,11 @@
 #include "engine/services/Service.h"
 #include "engine/services/ServiceRegistry.h"
 #include "engine/services/ServiceLocator.h"
+#include "engine/diagnostics/Profiler.h"
+#include "engine/diagnostics/ProfilerSession.h"
+#include "engine/diagnostics/DiagnosticsManager.h"
+#include "engine/diagnostics/PerformanceSnapshot.h"
+#include "engine/diagnostics/EngineStatistics.h"
 
 #include <iostream>
 #include <memory>
@@ -794,6 +799,142 @@ int main() {
 
         // 18i. Unbind locator.
         liz::ServiceLocator::reset();
+    }
+
+    std::cout << std::endl;
+
+    // -- 19. Diagnostics & Profiler Foundation (Sprint 13 — NEW) ---------------
+    LIZ_INFO("--- Diagnostics & Profiler Foundation (Sprint 13) ---");
+
+    {
+        liz::DiagnosticsManager diag;
+
+        // 19a. Set up data provider with values from existing subsystems.
+        liz::DiagnosticsDataProvider provider;
+
+        // Populate from existing subsystems (reuse data, don't duplicate).
+        provider.fps               = perf_mgr.effective_fps();
+        provider.frame_time_ms     = perf_mgr.avg_frame_latency_ms();
+        provider.cpu_time_ms       = perf_mgr.avg_frame_latency_ms() * 0.8; // simulated
+        provider.gpu_time_ms       = perf_mgr.avg_frame_latency_ms() * 0.5; // simulated
+        provider.ram_used          = 128ULL * 1024ULL * 1024ULL;           // 128 MB simulated
+        provider.vram_used         = gpu_compute.memory_pool().used_memory();
+        provider.events_published  = 0;  // Event bus was local to Sprint 11 block
+        provider.services_active   = 9;   // From Sprint 12 registry (10 - 1 removed)
+        provider.resources_active  = res_mgr.resource_count();
+        provider.tasks_pending     = engine.scheduler().pending_count();
+        provider.frames_processed  = perf_mgr.frames_consumed();
+        provider.plugins_active    = engine.plugin_manager().count();
+        provider.batches_executed  = gpu_compute.batches_processed();
+        provider.gpu_commands      = gpu_compute.commands_processed();
+
+        // Total runtime estimate based on frame processing.
+        provider.total_runtime_ms = perf_mgr.effective_fps() > 0.0
+            ? (static_cast<double>(perf_mgr.frames_consumed()) / perf_mgr.effective_fps()) * 1000.0
+            : 0.0;
+
+        diag.set_provider(&provider);
+
+        std::cout << std::endl;
+
+        // 19b. Start profiler and create session.
+        LIZ_INFO("Starting profiler session...");
+        diag.profiler().start("full_pipeline_profile");
+
+        // 19c. Profile several engine operations.
+        diag.profiler().begin_section("task_submission");
+        engine.submit_task("diag_task_1", []() -> bool {
+            // Simulated work
+            volatile int x = 0;
+            for (int i = 0; i < 1000; ++i) { x += i; }
+            return true;
+        });
+        engine.submit_task("diag_task_2", []() -> bool {
+            volatile int x = 0;
+            for (int i = 0; i < 2000; ++i) { x += i; }
+            return true;
+        });
+        diag.profiler().end_section("task_submission");
+
+        diag.profiler().begin_section("resource_creation");
+        {
+            liz::ResourceManager temp_res;
+            temp_res.create("diag_res_1", liz::ResourceType::Frame, 230400);
+            temp_res.create("diag_res_2", liz::ResourceType::Tensor, 921600);
+            temp_res.create("diag_res_3", liz::ResourceType::GPUBuffer, 1048576);
+        }
+        diag.profiler().end_section("resource_creation");
+
+        diag.profiler().begin_section("event_publishing");
+        {
+            liz::EventBus temp_bus;
+            DiagnosticListener dl;
+            temp_bus.subscribe(&dl);
+            temp_bus.publish(liz::Event(liz::EventType::FrameDecoded, "Diagnostics", "Profiled frame"));
+            temp_bus.publish(liz::Event(liz::EventType::InferenceFinished, "Diagnostics", "Profiled inference"));
+        }
+        diag.profiler().end_section("event_publishing");
+
+        std::cout << std::endl;
+
+        // 19d. Capture three snapshots with updated provider data.
+        LIZ_INFO("Capturing snapshots...");
+
+        // Snapshot 1: early state.
+        provider.tasks_pending = engine.scheduler().pending_count();
+        auto snap1 = diag.capture_snapshot("snapshot_early");
+        {
+            std::ostringstream oss;
+            oss << "  Snapshot 1: " << snap1.to_string();
+            LIZ_INFO(oss.str());
+        }
+
+        std::cout << std::endl;
+
+        // Run some tasks to change state.
+        engine.run_pending();
+
+        // Snapshot 2: mid-pipeline.
+        provider.tasks_pending = engine.scheduler().pending_count();
+        provider.frames_processed = perf_mgr.frames_consumed();
+        auto snap2 = diag.capture_snapshot("snapshot_mid");
+        {
+            std::ostringstream oss;
+            oss << "  Snapshot 2: " << snap2.to_string();
+            LIZ_INFO(oss.str());
+        }
+
+        std::cout << std::endl;
+
+        // Snapshot 3: final state.
+        provider.vram_used = gpu_compute.memory_pool().used_memory();
+        provider.tasks_pending = engine.scheduler().pending_count();
+        auto snap3 = diag.capture_snapshot("snapshot_final");
+        {
+            std::ostringstream oss;
+            oss << "  Snapshot 3: " << snap3.to_string();
+            LIZ_INFO(oss.str());
+        }
+
+        std::cout << std::endl;
+
+        // 19e. Stop profiler.
+        diag.profiler().stop();
+
+        // 19f. Show statistics.
+        LIZ_INFO("Engine statistics:");
+        auto stats = diag.statistics();
+        {
+            std::ostringstream oss;
+            oss << "  " << stats.to_string();
+            LIZ_INFO(oss.str());
+        }
+
+        std::cout << std::endl;
+
+        // 19g. Print full diagnostic report.
+        LIZ_INFO("Full diagnostic report:");
+        diag.print_report();
     }
 
     std::cout << std::endl;
