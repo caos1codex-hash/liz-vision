@@ -1,7 +1,7 @@
 // LIZ Vision — Desktop Application Entry Point
-// Sprint 1+2+3+4+5+6+7 Demo: Engine, video pipeline, AI pipeline,
+// Sprint 1+2+3+4+5+6+7+8 Demo: Engine, video pipeline, AI pipeline,
 //   GPU routing, streaming, inference layer, performance layer,
-//   GPU execution layer (simple stable version — no internal concurrency).
+//   GPU execution layer (FIFO), tensor + batch processing layer.
 
 #include "engine/core/Engine.h"
 #include "engine/core/Logger.h"
@@ -13,9 +13,13 @@
 #include "engine/ai/inference/InferenceEngine.h"
 #include "engine/ai/inference/ModelLoader.h"
 #include "engine/ai/models/ModelRegistry.h"
+#include "engine/ai/tensor/Tensor.h"
+#include "engine/ai/tensor/TensorShape.h"
 #include "engine/gpu/GPUContext.h"
 #include "engine/gpu/compute/GPUComputeEngine.h"
 #include "engine/gpu/compute/GPUCommand.h"
+#include "engine/gpu/batch/Batch.h"
+#include "engine/gpu/batch/BatchProcessorGPU.h"
 #include "engine/performance/ThreadPool.h"
 #include "engine/performance/FrameQueue.h"
 #include "engine/performance/TaskExecutor.h"
@@ -98,12 +102,11 @@ int main() {
     LIZ_INFO("--- GPU Execution Layer (Sprint 7 — stable) ---");
 
     liz::GPUComputeEngine gpu_compute;
-    if (!gpu_compute.initialize(512)) {  // 512 MB VRAM
+    if (!gpu_compute.initialize(512)) {
         LIZ_ERROR("Failed to initialize GPU Compute Engine");
         return 1;
     }
 
-    // Log initial memory pool state.
     gpu_compute.memory_pool().log_summary();
 
     std::cout << std::endl;
@@ -116,26 +119,24 @@ int main() {
 
     std::cout << std::endl;
 
-    // -- 7. Decode frames for GPU pipeline demo --------------------------------
+    // -- 7. Decode frames ------------------------------------------------------
     liz::VideoDecoder decoder;
     liz::DecodeRequest req;
     req.source_path   = "input_video.mp4";
     req.target_width  = 320;
     req.target_height = 240;
     req.fps           = 24.0;
-    req.max_frames    = 6;
+    req.max_frames    = 8;
 
     auto decode_result = decoder.decode(req);
 
     std::cout << std::endl;
 
-    // -- 8. GPU Command Pipeline Demo (Sprint 7) ------------------------------
-    LIZ_INFO("--- GPU Command Pipeline Demo ---");
+    // -- 8. GPU Command Pipeline Demo (Sprint 7 — FIFO preserved) --------------
+    LIZ_INFO("--- GPU Command Pipeline Demo (Sprint 7 FIFO) ---");
 
     if (decode_result.success && !decode_result.frames.empty()) {
-
-        // 8a. Upload all frames to GPU (submit only).
-        LIZ_INFO("Phase 1: Submitting upload commands...");
+        LIZ_INFO("Submitting upload + inference + copy commands...");
         for (const auto& frame : decode_result.frames) {
             std::ostringstream name;
             name << "upload_frame_" << frame.frame_id();
@@ -144,12 +145,8 @@ int main() {
                     name.str(), frame.data_size_bytes()));
             perf_mgr.record_frame_produced();
         }
-
-        // Process all pending commands.
         gpu_compute.process_all();
 
-        // 8b. Run inference commands.
-        LIZ_INFO("Phase 2: Submitting inference commands...");
         for (std::size_t i = 0; i < decode_result.frames.size(); ++i) {
             std::ostringstream name;
             name << "inference_frame_" << i;
@@ -157,11 +154,8 @@ int main() {
                 std::make_shared<liz::RunInferenceCommand>(
                     name.str(), "liz_upscaler_v1", "upscale_2x"));
         }
-
         gpu_compute.process_all();
 
-        // 8c. Copy buffer commands (download simulation).
-        LIZ_INFO("Phase 3: Submitting copy buffer commands...");
         for (std::size_t i = 0; i < decode_result.frames.size(); ++i) {
             std::ostringstream name;
             name << "copy_buffer_" << i;
@@ -171,43 +165,96 @@ int main() {
                     decode_result.frames[i].data_size_bytes()));
             perf_mgr.record_frame_consumed();
         }
-
         gpu_compute.process_all();
-
-        std::cout << std::endl;
-
-        // 8d. Verify FIFO order with explicit process_next().
-        LIZ_INFO("Phase 4: Verifying FIFO with process_next()...");
-        gpu_compute.submit(
-            std::make_shared<liz::UploadFrameCommand>("fifo_upload_1", 1024));
-        gpu_compute.submit(
-            std::make_shared<liz::RunInferenceCommand>("fifo_infer_1", "model_a", "op_x"));
-        gpu_compute.submit(
-            std::make_shared<liz::CopyBufferCommand>("fifo_copy_1", 1, 2048));
-
-        // Process one by one to verify FIFO.
-        while (gpu_compute.process_next()) {
-            // each call pops the front command
-        }
-
-        std::cout << std::endl;
-
-        // 8e. Memory pool demo.
-        LIZ_INFO("Phase 5: Memory pool allocation demo...");
-        auto buf1 = gpu_compute.memory_pool().allocate(1024 * 1024);  // 1 MB
-        auto buf2 = gpu_compute.memory_pool().allocate(2 * 1024 * 1024);  // 2 MB
-        gpu_compute.memory_pool().log_summary();
-
-        gpu_compute.memory_pool().free(buf1.id);
-        gpu_compute.memory_pool().log_summary();
-
-        gpu_compute.memory_pool().free(buf2.id);
-        gpu_compute.memory_pool().log_summary();
     }
 
     std::cout << std::endl;
 
-    // -- 9. AI Pipeline (Sprint 3 — preserved) --------------------------------
+    // -- 9. Tensor + Batch Layer (Sprint 8 — NEW) -----------------------------
+    LIZ_INFO("--- Tensor + Batch Execution Layer (Sprint 8) ---");
+
+    if (decode_result.success && !decode_result.frames.empty()) {
+
+        // 9a. Tensor conversion demo.
+        LIZ_INFO("Step 1: Frame -> Tensor conversion...");
+        for (std::size_t i = 0; i < 3; ++i) {
+            const auto& f = decode_result.frames[i];
+            auto tensor = liz::Tensor::from_frame_data(
+                f.width(), f.height(), f.data());
+            tensor.set_type(liz::TensorType::ModelInput);
+
+            std::ostringstream oss;
+            oss << "  " << tensor.info();
+            LIZ_INFO(oss.str());
+        }
+
+        // 9b. Tensor reshape demo.
+        LIZ_INFO("Step 2: Tensor reshape demo...");
+        liz::TensorShape shape{320, 240, 3};
+        liz::Tensor t1(shape, liz::TensorType::Frame);
+        {
+            std::ostringstream oss;
+            oss << "  Before: " << t1.info();
+            LIZ_INFO(oss.str());
+        }
+        t1.reshape({640, 120, 3});
+        {
+            std::ostringstream oss;
+            oss << "  After:  " << t1.info();
+            LIZ_INFO(oss.str());
+        }
+
+        std::cout << std::endl;
+
+        // 9c. Batch grouping demo (batch_size=4 for 8 frames -> 2 batches).
+        LIZ_INFO("Step 3: Batch grouping (batch_size=4)...");
+        liz::BatchProcessorGPU batch_proc_gpu(4);
+        auto batches = batch_proc_gpu.process_frames(decode_result.frames);
+
+        std::cout << std::endl;
+
+        // 9d. GPU batch processing demo.
+        LIZ_INFO("Step 4: GPU batch processing pipeline...");
+
+        // Reset the GPU compute engine's memory pool for clean batch demo.
+        liz::GPUComputeEngine batch_engine;
+        batch_engine.initialize(512);
+
+        for (const auto& batch : batches) {
+            batch_engine.process_batch(batch, "liz_upscaler_v1", "upscale_2x");
+        }
+
+        std::cout << std::endl;
+
+        // 9e. process_and_submit convenience demo (batch_size=2 -> 4 batches).
+        LIZ_INFO("Step 5: BatchProcessorGPU.process_and_submit (batch_size=2)...");
+        liz::BatchProcessorGPU small_batch_proc(2);
+
+        liz::GPUComputeEngine small_batch_engine;
+        small_batch_engine.initialize(512);
+
+        small_batch_proc.process_and_submit(
+            decode_result.frames, small_batch_engine,
+            "liz_denoiser_v1", "denoise");
+
+        std::cout << std::endl;
+
+        // 9f. BatchProcessorGPU stats.
+        auto bs = small_batch_proc.stats();
+        {
+            std::ostringstream oss;
+            oss << "BatchProcessorGPU stats: "
+                << bs.tensors_received << " tensors -> "
+                << bs.batches_created << " batches (max="
+                << bs.max_batch_size << "), "
+                << bs.total_batches_processed << " submitted to GPU";
+            LIZ_INFO(oss.str());
+        }
+    }
+
+    std::cout << std::endl;
+
+    // -- 10. AI Pipeline (Sprint 3 — preserved) --------------------------------
     LIZ_INFO("--- AI Processing Layer (Sprint 3) ---");
 
     liz::AIPipeline ai_pipeline;
@@ -221,7 +268,7 @@ int main() {
 
     std::cout << std::endl;
 
-    // -- 10. Model Registry + Inference (Sprint 5 — preserved) ----------------
+    // -- 11. Model Registry + Inference (Sprint 5 — preserved) ----------------
     LIZ_INFO("--- Model + Inference Layer (Sprint 5) ---");
 
     liz::ModelRegistry registry;
@@ -240,7 +287,7 @@ int main() {
 
     std::cout << std::endl;
 
-    // -- 11. BatchProcessor (Sprint 6 — preserved) ---------------------------
+    // -- 12. BatchProcessor (Sprint 6 — preserved) ---------------------------
     LIZ_INFO("--- BatchProcessor Demo (parallel) ---");
 
     if (decode_result.success) {
@@ -260,21 +307,21 @@ int main() {
 
     std::cout << std::endl;
 
-    // -- 12. Performance Summary -----------------------------------------------
+    // -- 13. Performance Summary -----------------------------------------------
     perf_mgr.log_summary();
 
     std::cout << std::endl;
 
-    // -- 13. Full Pipeline Summary (Sprint 7) ----------------------------------
+    // -- 14. Full Pipeline Summary (Sprint 8) ----------------------------------
     {
         std::ostringstream oss;
         oss << "============================================" << std::endl
-            << "  FULL PIPELINE SUMMARY (Sprint 7)" << std::endl
+            << "  FULL PIPELINE SUMMARY (Sprint 8)" << std::endl
             << "============================================" << std::endl
             << "  GPU Backend:       " << gpu_ctx.backend_name()
             << " (" << gpu_ctx.device_info() << ")" << std::endl
             << "  GPU Compute:       "
-            << gpu_compute.commands_processed() << " commands processed" << std::endl
+            << gpu_compute.commands_processed() << " FIFO commands" << std::endl
             << "  GPU Queue (FIFO):  simple, no internal concurrency" << std::endl
             << "  VRAM Pool:         "
             << (gpu_compute.memory_pool().used_memory() / 1024) << "KB / "
@@ -282,17 +329,18 @@ int main() {
             << "  Video Streaming:   " << vp_stats.frames_received << " frames" << std::endl
             << "  ThreadPool:        " << pool.worker_count() << " workers" << std::endl
             << "  Performance:       fps=" << perf_mgr.effective_fps() << std::endl
-            << "  Flow: CPU Scheduler + ThreadPool" << std::endl
-            << "     -> GPU Command Queue (FIFO)" << std::endl
-            << "     -> GPU Memory Pool (512 MB)" << std::endl
+            << "  Flow: Frame Stream" << std::endl
+            << "     -> Tensor Conversion Layer" << std::endl
+            << "     -> Batch GPU Processor" << std::endl
+            << "     -> GPU Compute Engine (batch-aware FIFO)" << std::endl
             << "     -> AI Inference Engine" << std::endl
-            << "     -> Video Enhancement Output";
+            << "     -> Optimized Video Output";
         LIZ_INFO(oss.str());
     }
 
     std::cout << std::endl;
 
-    // -- 14. Cleanup -----------------------------------------------------------
+    // -- 15. Cleanup -----------------------------------------------------------
     gpu_compute.shutdown();
     pool.shutdown();
     ai_pipeline.clear_processors();

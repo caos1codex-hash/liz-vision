@@ -18,6 +18,8 @@ add_library(liz-engine
     ai/AIProcessor.cpp
     ai/AIContext.cpp
     ai/AIPipeline.cpp
+    ai/tensor/TensorShape.cpp
+    ai/tensor/Tensor.cpp
     gpu/GPUDevice.cpp
     gpu/GPUContext.cpp
     gpu/memory/GPUBuffer.cpp
@@ -25,6 +27,8 @@ add_library(liz-engine
     gpu/compute/GPUCommand.cpp
     gpu/compute/GPUQueue.cpp
     gpu/compute/GPUComputeEngine.cpp
+    gpu/batch/Batch.cpp
+    gpu/batch/BatchProcessorGPU.cpp
     ai/inference/Model.cpp
     ai/inference/ModelLoader.cpp
     ai/inference/InferenceEngine.cpp
