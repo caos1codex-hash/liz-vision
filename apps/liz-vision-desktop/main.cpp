@@ -24,6 +24,9 @@
 #include "engine/resources/ResourceManager.h"
 #include "engine/resources/ResourceHandle.h"
 #include "engine/runtime/Runtime.h"
+#include "engine/events/EventBus.h"
+#include "engine/events/Event.h"
+#include "engine/events/EventListener.h"
 #include "engine/performance/ThreadPool.h"
 #include "engine/performance/FrameQueue.h"
 #include "engine/performance/TaskExecutor.h"
@@ -59,6 +62,49 @@ public:
 private:
     std::string name_;
     std::string category_;
+};
+
+// -- Event Bus Demo Listeners (Sprint 11) ------------------------------------
+class VideoListener : public liz::EventListener {
+public:
+    std::string_view name() const override { return "VideoListener"; }
+    void on_event(const liz::Event& event) override {
+        if (event.type() == liz::EventType::EngineStarted ||
+            event.type() == liz::EventType::EngineStopped ||
+            event.type() == liz::EventType::FrameDecoded ||
+            event.type() == liz::EventType::InferenceFinished) {
+            std::ostringstream oss;
+            oss << "  [VideoListener] received: " << event.info();
+            LIZ_INFO(oss.str());
+        }
+    }
+};
+
+class GPUListener : public liz::EventListener {
+public:
+    std::string_view name() const override { return "GPUListener"; }
+    void on_event(const liz::Event& event) override {
+        if (event.type() == liz::EventType::EngineStarted ||
+            event.type() == liz::EventType::EngineStopped ||
+            event.type() == liz::EventType::GPUCommandSubmitted ||
+            event.type() == liz::EventType::GPUCommandCompleted ||
+            event.type() == liz::EventType::InferenceStarted ||
+            event.type() == liz::EventType::InferenceFinished) {
+            std::ostringstream oss;
+            oss << "  [GPUListener] received: " << event.info();
+            LIZ_INFO(oss.str());
+        }
+    }
+};
+
+class DiagnosticListener : public liz::EventListener {
+public:
+    std::string_view name() const override { return "DiagnosticListener"; }
+    void on_event(const liz::Event& event) override {
+        std::ostringstream oss;
+        oss << "  [DiagnosticListener] received: " << event.info();
+        LIZ_INFO(oss.str());
+    }
 };
 
 // -- Main ----------------------------------------------------------------------
@@ -503,16 +549,82 @@ int main() {
 
     std::cout << std::endl;
 
-    // -- 15. Performance Summary -----------------------------------------------
+    // -- 15. Event Bus Foundation (Sprint 11 — NEW) --------------------------
+    LIZ_INFO("--- Event Bus Foundation (Sprint 11) ---");
+
+    {
+        liz::EventBus bus;
+        VideoListener video_listener;
+        GPUListener gpu_listener;
+        DiagnosticListener diagnostic_listener;
+
+        // Subscribe all three listeners.
+        bus.subscribe(&video_listener);
+        bus.subscribe(&gpu_listener);
+        bus.subscribe(&diagnostic_listener);
+
+        std::cout << std::endl;
+
+        // Publish events demonstrating selective reception.
+        LIZ_INFO("Publishing EngineStarted...");
+        bus.publish(liz::Event(liz::EventType::EngineStarted, "Runtime",
+                               "Engine has started", liz::EventPriority::High));
+
+        std::cout << std::endl;
+
+        LIZ_INFO("Publishing FrameDecoded...");
+        bus.publish(liz::Event(liz::EventType::FrameDecoded, "VideoPipeline",
+                               "Frame 42 decoded (320x240)", liz::EventPriority::Normal));
+
+        std::cout << std::endl;
+
+        LIZ_INFO("Publishing TensorCreated...");
+        bus.publish(liz::Event(liz::EventType::TensorCreated, "TensorLayer",
+                               "Tensor upscaled_input created (3x320x240)", liz::EventPriority::Normal));
+
+        std::cout << std::endl;
+
+        LIZ_INFO("Publishing InferenceFinished...");
+        bus.publish(liz::Event(liz::EventType::InferenceFinished, "InferenceEngine",
+                               "Batch 1 inference completed (4 frames)", liz::EventPriority::High));
+
+        std::cout << std::endl;
+
+        LIZ_INFO("Publishing EngineStopped...");
+        bus.publish(liz::Event(liz::EventType::EngineStopped, "Runtime",
+                               "Engine has stopped", liz::EventPriority::Critical));
+
+        std::cout << std::endl;
+
+        // Unsubscribe diagnostic listener.
+        LIZ_INFO("Unsubscribing DiagnosticListener...");
+        bus.unsubscribe(&diagnostic_listener);
+
+        std::cout << std::endl;
+
+        // Publish one more event to show selective delivery after unsubscribe.
+        LIZ_INFO("Publishing EngineStarted after unsubscribe...");
+        bus.publish(liz::Event(liz::EventType::EngineStarted, "Runtime",
+                               "Engine restarted (diagnostic gone)", liz::EventPriority::Normal));
+
+        std::cout << std::endl;
+
+        // Statistics.
+        bus.log_statistics();
+    }
+
+    std::cout << std::endl;
+
+    // -- 16. Performance Summary -----------------------------------------------
     perf_mgr.log_summary();
 
     std::cout << std::endl;
 
-    // -- 16. Full Pipeline Summary (Sprint 10) ----------------------------------
+    // -- 17. Full Pipeline Summary (Sprint 11) ----------------------------------
     {
         std::ostringstream oss;
         oss << "============================================" << std::endl
-            << "  FULL PIPELINE SUMMARY (Sprint 10)" << std::endl
+            << "  FULL PIPELINE SUMMARY (Sprint 11)" << std::endl
             << "============================================" << std::endl
             << "  GPU Backend:       " << gpu_ctx.backend_name()
             << " (" << gpu_ctx.device_info() << ")" << std::endl
@@ -532,7 +644,8 @@ int main() {
             << "     -> AI Inference Engine" << std::endl
             << "     -> Optimized Video Output" << std::endl
             << "     -> Resource Manager (centralized)" << std::endl
-            << "     -> Runtime (lifecycle controller)";
+            << "     -> Runtime (lifecycle controller)" << std::endl
+            << "     -> EventBus (module communication)";
         LIZ_INFO(oss.str());
     }
 
