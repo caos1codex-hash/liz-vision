@@ -20,6 +20,11 @@ add_library(liz-engine
     ai/AIPipeline.cpp
     gpu/GPUDevice.cpp
     gpu/GPUContext.cpp
+    gpu/memory/GPUBuffer.cpp
+    gpu/memory/GPUMemoryPool.cpp
+    gpu/compute/GPUCommand.cpp
+    gpu/compute/GPUQueue.cpp
+    gpu/compute/GPUComputeEngine.cpp
     ai/inference/Model.cpp
     ai/inference/ModelLoader.cpp
     ai/inference/InferenceEngine.cpp
