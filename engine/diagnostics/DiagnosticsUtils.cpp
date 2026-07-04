@@ -41,7 +41,9 @@ std::string EngineStatistics::to_string() const {
         << " inferences=" << inferences_executed
         << " gpu_commands=" << gpu_commands
         << " assets=" << assets_loaded
-        << " assets_active=" << assets_active;
+        << " assets_active=" << assets_active
+        << " pipelines=" << pipelines_active
+        << " pipeline_nodes=" << pipeline_nodes;
     return oss.str();
 }
 

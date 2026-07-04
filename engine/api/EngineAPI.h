@@ -5,6 +5,7 @@
 #include "engine/api/ApiTypes.h"
 #include "engine/api/EngineBuilder.h"
 #include "engine/api/EngineSession.h"
+#include "engine/pipeline/PipelineStatistics.h"
 
 #include <memory>
 #include <string>
@@ -19,6 +20,8 @@ class DiagnosticsManager;
 class AssetManager;
 class EventBus;
 class DiagnosticsDataProvider;
+class PipelineExecutor;
+class PipelineGraph;
 
 /// Public API facade for the LIZ Engine.
 ///
@@ -97,6 +100,20 @@ public:
     /// Get diagnostics information (public view).
     DiagnosticsInfo diagnostics_info() const;
 
+    // ── Pipeline info ───────────────────────────────────────────────
+
+    /// Create a new pipeline graph by name.
+    ApiResult create_pipeline(const std::string& name);
+
+    /// Destroy a pipeline by name.
+    ApiResult destroy_pipeline(const std::string& name);
+
+    /// Get statistics for a specific pipeline.
+    PipelineStatistics pipeline_statistics(const std::string& name) const;
+
+    /// List all pipelines.
+    PipelineInfoList list_pipelines() const;
+
 private:
     // Internal engine — never exposed.
     std::unique_ptr<Engine>                engine_;
@@ -105,6 +122,7 @@ private:
     std::unique_ptr<AssetManager>          asset_manager_;
     std::unique_ptr<EventBus>               event_bus_;
     std::unique_ptr<DiagnosticsDataProvider> data_provider_;
+    std::unique_ptr<PipelineExecutor>         pipeline_executor_;
 
     // Public sessions.
     std::vector<std::unique_ptr<EngineSession>> sessions_;

@@ -12,6 +12,8 @@
 #include "engine/assets/AssetManager.h"
 #include "engine/assets/AssetType.h"
 #include "engine/events/EventBus.h"
+#include "engine/pipeline/PipelineExecutor.h"
+#include "engine/pipeline/PipelineGraph.h"
 
 #include <algorithm>
 #include <chrono>
@@ -100,7 +102,17 @@ ApiResult EngineAPI::initialize(const EngineBuilder& config) {
         service_registry_->register_service("AssetManager", ServiceType::AssetManager, "1.0.0");
     }
 
-    // 6. Create an implicit default session.
+// 6. Create PipelineExecutor.
+    pipeline_executor_ = std::make_unique<PipelineExecutor>();
+    pipeline_executor_->initialize();
+
+    if (event_bus_) {
+        pipeline_executor_->set_event_bus(event_bus_.get());
+    }
+
+    service_registry_->register_service("PipelineExecutor", ServiceType::PipelineExecutor, "1.0.0");
+
+    // 7. Create an implicit default session.
     SessionInfo default_session;
     create_session(default_session);
 
@@ -122,6 +134,11 @@ ApiResult EngineAPI::shutdown() {
     sessions_.clear();
 
     // Shutdown subsystems in reverse order.
+    if (pipeline_executor_) {
+        pipeline_executor_->shutdown();
+        pipeline_executor_.reset();
+    }
+
     if (asset_manager_) {
         asset_manager_->shutdown();
         asset_manager_.reset();
@@ -314,6 +331,65 @@ DiagnosticsInfo EngineAPI::diagnostics_info() const {
     }
 
     return info;
+}
+
+// ── Pipeline info ────────────────────────────────────────────────────
+
+ApiResult EngineAPI::create_pipeline(const std::string& name) {
+    if (!initialized_) return ApiResult::Failed;
+
+    auto graph = std::make_unique<PipelineGraph>(name);
+    if (event_bus_) graph->set_event_bus(event_bus_.get());
+
+    if (!pipeline_executor_->register_pipeline(std::move(graph))) {
+        return ApiResult::AlreadyExists;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: pipeline created — name=" << name;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::destroy_pipeline(const std::string& name) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!pipeline_executor_->destroy_pipeline(name)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: pipeline destroyed — name=" << name;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+PipelineStatistics EngineAPI::pipeline_statistics(const std::string& name) const {
+    if (!pipeline_executor_) return PipelineStatistics{};
+    return pipeline_executor_->pipeline_statistics(name);
+}
+
+PipelineInfoList EngineAPI::list_pipelines() const {
+    PipelineInfoList result;
+    if (!pipeline_executor_) return result;
+
+    auto names = pipeline_executor_->list_pipelines();
+    for (const auto& name : names) {
+        auto stats = pipeline_executor_->pipeline_statistics(name);
+        PipelineInfo info;
+        info.name = name;
+        info.nodes = stats.total_nodes;
+        info.edges = stats.total_edges;
+        info.executed = stats.nodes_executed;
+        info.failed = stats.nodes_failed;
+        info.disabled = stats.nodes_disabled;
+        info.execution_time_ms = stats.execution_time_ms;
+        info.valid = stats.validation_result;
+        result.push_back(info);
+    }
+    return result;
 }
 
 } // namespace liz

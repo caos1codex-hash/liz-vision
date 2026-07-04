@@ -4,6 +4,64 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 16 — Pipeline Graph Foundation (2026-07-05)
+
+Created the Pipeline Graph architecture — the foundation for all future
+LIZ Engine processing workflows. Processing pipelines are now represented
+as Directed Acyclic Graphs (DAGs) where nodes represent operations and
+edges represent data flow.
+
+No real AI, GPU, or video processing is performed — this sprint creates
+only the infrastructure.
+
+**New module:** `engine/pipeline/`
+
+- `PipelineTypes` — enums: `PipelineNodeType` (11 types), `PipelineNodeState` (6 states), `ConnectionType` (Data, Control, Dependency)
+- `PipelineNode` — node with UUID, name, type, state, input/output tracking, logical position (x,y), enable/disable, simulated `execute()`
+- `PipelineEdge` — directed connection between nodes with UUID, source/dest, connection type, active state
+- `PipelineGraph` — DAG manager: `create_node()`, `remove_node()`, `connect()`, `disconnect()`, `find_node()`, `find_edge()`, `list_nodes()`, `list_edges()`, `statistics()`, `clear()`, `validate()` with cycle detection (DFS-based)
+- `PipelineExecutor` — graph traversal engine: `register_pipeline()`, `destroy_pipeline()`, `execute()` with topological sort (Kahn's algorithm), `pipeline_statistics()`, `global_statistics()`
+- `PipelineStatistics` — stats: nodes, edges, executed, failed, disabled, execution_time, validation_result
+
+**Architecture:**
+
+```
+Application
+    |
+    v
+Public API (EngineBuilder / EngineAPI / EngineSession)
+    |
+    v
+PipelineGraph (DAG)
+    |
+    v
+PipelineNode (operations) <-- PipelineEdge (connections)
+    |
+    v
+Engine (GPU / AI / Video / ...)
+```
+
+**Integration:**
+
+- EventBus: 5 new events (PipelineCreated, PipelineDestroyed, NodeCreated, NodeExecuted, PipelineFinished)
+- Service Registry: PipelineExecutor registered as official service (ServiceType::PipelineExecutor)
+- Diagnostics: pipeline stats in EngineStatistics and DiagnosticsManager reports
+- Public API: `create_pipeline()`, `destroy_pipeline()`, `pipeline_statistics()`, `list_pipelines()`
+- ApiTypes: new `PipelineInfo` and `PipelineInfoList` types
+
+**Cycle detection:**
+- DFS-based cycle prevention on `connect()`
+- Validates entire graph on `validate()`
+- Proposed edges are tested before insertion
+
+**Backward compatibility:**
+- All sprints 1-15 fully functional
+- LegacyDemo, Sprint14Demo, Sprint15Demo unmodified
+
+**Commit:** `Implement Pipeline Graph Foundation (Sprint 16)`
+
+---
+
 ## Sprint 15 — Public API Foundation (2026-07-05)
 
 Created the first official public API layer for the LIZ Engine. This sprint

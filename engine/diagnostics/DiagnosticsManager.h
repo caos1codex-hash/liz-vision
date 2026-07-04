@@ -48,6 +48,12 @@ public:
     // -- Assets (Sprint 14) --
     std::size_t assets_loaded        = 0;
     std::size_t assets_active        = 0;
+
+    // -- Pipelines (Sprint 16) --
+    std::size_t pipelines_active     = 0;
+    std::size_t pipeline_nodes       = 0;
+    double     pipeline_exec_time_ms = 0.0;
+    std::size_t pipeline_errors      = 0;
 };
 
 /// Central diagnostics and profiling manager for the LIZ Vision engine.

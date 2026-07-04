@@ -177,3 +177,61 @@ Public facade for the engine:
 - **No duplication**: No logic is copied or moved from internal modules.
 - **Low coupling**: The API depends only on public types.
 - **Future SDK**: This layer prepares for distribution as a shared library.
+
+## Pipeline Graph
+
+The Pipeline Graph is the foundation for all future LIZ Engine operations.
+Processing workflows (Video, AI, GPU, Plugins, Assets) can be represented as
+directed acyclic graphs (DAGs).
+
+### Creating a Pipeline via Public API
+
+```cpp
+// Create a pipeline.
+api.create_pipeline("My Upscale Pipeline");
+
+// The pipeline is managed internally.
+// In future sprints, the API will expose node/edge manipulation.
+```
+
+### Architecture
+
+```
+Application
+    |
+    v
+Public API (EngineBuilder / EngineAPI / EngineSession)
+    |
+    v
+PipelineGraph (DAG)
+    |
+    v
+PipelineNode (operations) <-- PipelineEdge (connections)
+    |
+    v
+Engine (GPU / AI / Video / ...)
+```
+
+### Pipeline Node Types
+
+| Type | Description |
+|------|-------------|
+| `Input` | Data input (file, stream, buffer) |
+| `Decoder` | Video/audio decoding |
+| `VideoFilter` | Visual processing filter |
+| `TensorConverter` | Convert frames to tensors |
+| `Inference` | AI model inference |
+| `GPUUpload` | Upload data to GPU memory |
+| `GPUCompute` | GPU compute operation |
+| `GPUDownload` | Download data from GPU memory |
+| `Output` | Final output (file, display, buffer) |
+| `Custom` | User-defined node type |
+
+### Pipeline API (EngineAPI)
+
+| Method | Description |
+|--------|-------------|
+| `create_pipeline(name)` | Create a new pipeline |
+| `destroy_pipeline(name)` | Destroy a pipeline |
+| `pipeline_statistics(name)` | Get pipeline statistics |
+| `list_pipelines()` | List all pipelines |

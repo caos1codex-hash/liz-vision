@@ -84,8 +84,21 @@ struct DiagnosticsInfo {
     std::size_t snapshot_count = 0;
 };
 
+/// Pipeline information exposed through the public API.
+struct PipelineInfo {
+    std::string name;
+    std::size_t nodes = 0;
+    std::size_t edges = 0;
+    std::size_t executed = 0;
+    std::size_t failed = 0;
+    std::size_t disabled = 0;
+    double     execution_time_ms = 0.0;
+    bool       valid = true;
+};
+
 /// List of service/asset infos returned by query methods.
 using ServiceInfoList = std::vector<ServiceInfo>;
 using AssetInfoList   = std::vector<AssetInfo>;
+using PipelineInfoList = std::vector<PipelineInfo>;
 
 } // namespace liz

@@ -63,6 +63,11 @@ add_library(liz-engine
     api/EngineBuilder.cpp
     api/EngineAPI.cpp
     api/ApiTypes.cpp
+    pipeline/PipelineNode.cpp
+    pipeline/PipelineEdge.cpp
+    pipeline/PipelineGraph.cpp
+    pipeline/PipelineExecutor.cpp
+    pipeline/PipelineStatistics.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)

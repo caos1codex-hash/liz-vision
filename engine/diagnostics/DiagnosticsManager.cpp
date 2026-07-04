@@ -84,6 +84,10 @@ EngineStatistics DiagnosticsManager::statistics() const {
         stats.gpu_commands        = provider_->gpu_commands;
         stats.assets_loaded        = provider_->assets_loaded;
         stats.assets_active        = provider_->assets_active;
+        stats.pipelines_active     = provider_->pipelines_active;
+        stats.pipeline_nodes       = provider_->pipeline_nodes;
+        stats.pipeline_exec_time_ms = provider_->pipeline_exec_time_ms;
+        stats.pipeline_errors      = provider_->pipeline_errors;
     }
 
     return stats;
@@ -122,6 +126,7 @@ void DiagnosticsManager::print_report() const {
     oss << "  Inferences:    " << stats.inferences_executed << std::endl;
     oss << "  GPU Commands:  " << stats.gpu_commands << std::endl;
     oss << "  Assets:        " << stats.assets_loaded << " (" << stats.assets_active << " active)" << std::endl;
+    oss << "  Pipelines:     " << stats.pipelines_active << " active (" << stats.pipeline_nodes << " nodes)" << std::endl;
 
     // Latest snapshot performance metrics.
     oss << std::endl;

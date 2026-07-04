@@ -29,6 +29,11 @@ enum class EventType {
     AssetLoaded,
     AssetUnloaded,
     AssetDestroyed,
+    PipelineCreated,
+    PipelineDestroyed,
+    NodeCreated,
+    NodeExecuted,
+    PipelineFinished,
     Custom
 };
 
@@ -55,6 +60,11 @@ inline const char* event_type_to_string(EventType type) {
         case EventType::AssetLoaded:           return "AssetLoaded";
         case EventType::AssetUnloaded:         return "AssetUnloaded";
         case EventType::AssetDestroyed:        return "AssetDestroyed";
+        case EventType::PipelineCreated:       return "PipelineCreated";
+        case EventType::PipelineDestroyed:     return "PipelineDestroyed";
+        case EventType::NodeCreated:           return "NodeCreated";
+        case EventType::NodeExecuted:          return "NodeExecuted";
+        case EventType::PipelineFinished:      return "PipelineFinished";
         case EventType::Custom:                return "Custom";
     }
     return "Unknown";
