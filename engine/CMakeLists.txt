@@ -58,6 +58,11 @@ add_library(liz-engine
     assets/AssetHandle.cpp
     assets/AssetDatabase.cpp
     assets/AssetManager.cpp
+    api/ApiVersion.cpp
+    api/EngineSession.cpp
+    api/EngineBuilder.cpp
+    api/EngineAPI.cpp
+    api/ApiTypes.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)

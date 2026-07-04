@@ -7,5 +7,6 @@
 /// unloading, destruction, statistics, events, and logging.
 class Sprint14Demo : public DemoRunner {
 public:
+    std::string name() const override { return "Sprint 14 (Asset System)"; }
     int run() override;
 };

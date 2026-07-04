@@ -4,6 +4,65 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 15 — Public API Foundation (2026-07-05)
+
+Created the first official public API layer for the LIZ Engine. This sprint
+does NOT add new processing functionality — it creates a stable interface
+for external applications to consume the engine without accessing internals.
+
+Prepares the foundation for a future distributable SDK.
+
+**New module:** `engine/api/`
+
+- `ApiVersion` — semantic versioning (major.minor.patch+build), `version_string()`, `compatible_with()`, comparison operators
+- `ApiResult` — 10 result codes (Success, Warning, Failed, InvalidArgument, NotFound, AlreadyExists, Busy, Unsupported, InternalError, Timeout)
+- `ApiTypes` — public data structures: `ApiInfo`, `ApiStatistics`, `EngineInfo`, `SessionInfo`, `ServiceInfo`, `AssetInfo`, `DiagnosticsInfo`
+- `EngineSession` — public session with UUID, creation timestamp, `is_running()`, `shutdown()`, `active_time_ms()`
+- `EngineBuilder` — builder pattern: `set_application_name()`, `set_application_version()`, `enable_gpu()`, `enable_plugins()`, `enable_diagnostics()`, `enable_assets()`, `enable_events()`, `build()`
+- `EngineAPI` — public facade: `initialize()`, `shutdown()`, `create_session()`, `destroy_session()`, `version()`, `statistics()`, `runtime_info()`, `service_info()`, `asset_info()`, `diagnostics_info()`
+
+**Architecture:**
+
+```
+Applications
+    |
+    v
+Public API (EngineBuilder / EngineAPI / EngineSession)
+    |
+    v
+Runtime / Services / Assets / Diagnostics / ...
+```
+
+**SDK structure:**
+
+- `sdk/README.md` — Hello LIZ Engine example, API reference, architecture overview
+
+**DemoRunner improvements:**
+
+- `DemoRunner` now requires `name()` method (polymorphism)
+- `DemoRegistry` class: `register_demo()`, `remove_demo()`, `clear()`, `run_all()`, `run_demo(name)`, `list()`, `count()`, `has()`
+- No giant if-else chains — all demos registered dynamically via polymorphism
+- `main.cpp` uses `DemoRegistry` to run all demos
+
+**Integration:**
+
+- Logger: all API operations logged
+- Engine: internal engine created and managed by EngineAPI
+- Service Registry: 11 services registered during initialization
+- AssetManager: initialized if assets enabled in builder config
+- EventBus: created if events enabled in builder config
+- DiagnosticsManager: created if diagnostics enabled in builder config
+
+**Backward compatibility:**
+
+- All previous sprints (1-14) remain fully functional
+- LegacyDemo and Sprint14Demo continue to work without modifications
+- `DemoRunner` interface extended with `name()` — all existing demos updated
+
+**Commit:** `Implement Public API Foundation (Sprint 15)`
+
+---
+
 ## Sprint 14 — Asset System Foundation (2026-07-05)
 
 Implemented the official asset management system for the engine.

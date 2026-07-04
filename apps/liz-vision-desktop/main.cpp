@@ -1,13 +1,15 @@
 // LIZ Vision — Desktop Application Entry Point
-// Sprint 1-14: Engine + all module demos.
+// Sprint 1-15: Engine + all module demos.
 
 #include "engine/core/Engine.h"
 #include "engine/core/Logger.h"
 #include "demo/DemoRunner.h"
 #include "demo/LegacyDemo.h"
 #include "demo/Sprint14Demo.h"
+#include "demo/Sprint15Demo.h"
 
 #include <iostream>
+#include <memory>
 
 int main() {
     std::cout << std::endl;
@@ -21,25 +23,32 @@ int main() {
         return 1;
     }
 
-    // -- Run Legacy Demo (Sprints 1-13) --
+    // -- Register all demos dynamically --
+    DemoRegistry registry;
+    registry.register_demo(std::make_unique<LegacyDemo>());
+    registry.register_demo(std::make_unique<Sprint14Demo>());
+    registry.register_demo(std::make_unique<Sprint15Demo>());
+
+    // -- List registered demos --
     {
-        LegacyDemo legacy;
-        if (legacy.run() != 0) {
-            std::cerr << "Legacy demo failed" << std::endl;
-            return 1;
+        auto names = registry.list();
+        std::cout << "Registered demos (" << registry.count() << "):" << std::endl;
+        for (const auto& n : names) {
+            std::cout << "  - " << n << std::endl;
         }
+        std::cout << std::endl;
     }
 
-    // -- Run Sprint 14 Demo (Asset System Foundation) --
-    {
-        Sprint14Demo sprint14;
-        if (sprint14.run() != 0) {
-            std::cerr << "Sprint 14 demo failed" << std::endl;
-            return 1;
-        }
+    // -- Run all demos --
+    int result = registry.run_all();
+    if (result != 0) {
+        std::cerr << "One or more demos failed" << std::endl;
+        engine.shutdown();
+        return 1;
     }
 
     // -- Cleanup --
+    registry.clear();
     engine.shutdown();
 
     std::cout << std::endl;

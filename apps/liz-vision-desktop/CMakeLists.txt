@@ -5,6 +5,7 @@ set(DEMO_SOURCES
     demo/DemoRunner.cpp
     demo/LegacyDemo.cpp
     demo/Sprint14Demo.cpp
+    demo/Sprint15Demo.cpp
 )
 
 add_executable(liz-vision-desktop ${DEMO_SOURCES})
