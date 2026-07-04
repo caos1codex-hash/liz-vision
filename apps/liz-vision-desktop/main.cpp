@@ -1,7 +1,8 @@
 // LIZ Vision — Desktop Application Entry Point
-// Sprint 1+2+3+4+5+6+7+8 Demo: Engine, video pipeline, AI pipeline,
+// Sprint 1+2+3+4+5+6+7+8+9 Demo: Engine, video pipeline, AI pipeline,
 //   GPU routing, streaming, inference layer, performance layer,
-//   GPU execution layer (FIFO), tensor + batch processing layer.
+//   GPU execution layer (FIFO), tensor + batch processing layer,
+//   resource management foundation.
 
 #include "engine/core/Engine.h"
 #include "engine/core/Logger.h"
@@ -20,6 +21,8 @@
 #include "engine/gpu/compute/GPUCommand.h"
 #include "engine/gpu/batch/Batch.h"
 #include "engine/gpu/batch/BatchProcessorGPU.h"
+#include "engine/resources/ResourceManager.h"
+#include "engine/resources/ResourceHandle.h"
 #include "engine/performance/ThreadPool.h"
 #include "engine/performance/FrameQueue.h"
 #include "engine/performance/TaskExecutor.h"
@@ -307,12 +310,119 @@ int main() {
 
     std::cout << std::endl;
 
-    // -- 13. Performance Summary -----------------------------------------------
+    // -- 13. Resource Management (Sprint 9 — NEW) ---------------------------
+    LIZ_INFO("--- Resource Management Foundation (Sprint 9) ---");
+
+    liz::ResourceManager res_mgr;
+
+    // 13a. Create resources of various types.
+    auto h_video  = res_mgr.create("input_video.mp4",         liz::ResourceType::Video,        1024 * 1024);
+    auto h_frame0 = res_mgr.create("frame_0",                 liz::ResourceType::Frame,        230400);
+    auto h_frame1 = res_mgr.create("frame_1",                 liz::ResourceType::Frame,        230400);
+    auto h_tensor = res_mgr.create("upscale_tensor_0",        liz::ResourceType::Tensor,       921600);
+    auto h_model  = res_mgr.create("liz_upscaler_v1",         liz::ResourceType::AIModel,      50 * 1024 * 1024);
+    auto h_gpu    = res_mgr.create("gpu_buffer_pool",         liz::ResourceType::GPUBuffer,    512 * 1024 * 1024);
+    auto h_plugin = res_mgr.create("Demo Upscaler",           liz::ResourceType::Plugin,       4096);
+    auto h_config = res_mgr.create("engine_config",           liz::ResourceType::Configuration, 2048);
+    auto h_proj   = res_mgr.create("liz_vision_project",      liz::ResourceType::Project,      0);
+    auto h_temp   = res_mgr.create("temp_scratch_0",          liz::ResourceType::Temporary,    65536);
+
+    std::cout << std::endl;
+
+    // 13b. Query resources.
+    LIZ_INFO("Resource queries:");
+
+    {
+        auto res = res_mgr.get(h_video);
+        if (res) {
+            std::ostringstream oss;
+            oss << "  get(video handle): " << res->info();
+            LIZ_INFO(oss.str());
+        }
+    }
+
+    {
+        auto found = res_mgr.find_by_name("frame_0");
+        std::ostringstream oss;
+        oss << "  find_by_name('frame_0'): " << found.info();
+        LIZ_INFO(oss.str());
+    }
+
+    {
+        std::ostringstream oss;
+        oss << "  exists('frame_0'): " << (res_mgr.exists(h_frame0) ? "true" : "false");
+        LIZ_INFO(oss.str());
+    }
+
+    std::cout << std::endl;
+
+    // 13c. Reference counting.
+    LIZ_INFO("Reference counting demo:");
+
+    res_mgr.add_ref(h_frame0);
+    res_mgr.add_ref(h_frame0);
+    res_mgr.add_ref(h_frame1);
+
+    {
+        auto res = res_mgr.get(h_frame0);
+        std::ostringstream oss;
+        oss << "  frame_0 refs after +2: " << res->ref_count();
+        LIZ_INFO(oss.str());
+    }
+
+    res_mgr.release(h_frame0);
+    {
+        auto res = res_mgr.get(h_frame0);
+        std::ostringstream oss;
+        oss << "  frame_0 refs after -1: " << res->ref_count();
+        LIZ_INFO(oss.str());
+    }
+
+    std::cout << std::endl;
+
+    // 13d. State changes.
+    LIZ_INFO("State change demo:");
+    {
+        auto res = res_mgr.get(h_temp);
+        res->set_state(liz::ResourceState::Unloaded);
+        std::ostringstream oss;
+        oss << "  temp_scratch_0: " << res->info();
+        LIZ_INFO(oss.str());
+    }
+
+    std::cout << std::endl;
+
+    // 13e. Statistics.
+    LIZ_INFO("Statistics before cleanup:");
+    res_mgr.log_statistics();
+
+    std::cout << std::endl;
+
+    // 13f. Destroy one resource.
+    LIZ_INFO("Destroying one resource...");
+    res_mgr.destroy(h_temp);
+
+    std::cout << std::endl;
+
+    // 13g. Statistics after destroy.
+    LIZ_INFO("Statistics after destroy:");
+    res_mgr.log_statistics();
+
+    std::cout << std::endl;
+
+    // 13h. Clear cache.
+    LIZ_INFO("Clearing cache...");
+    res_mgr.clear_cache();
+    res_mgr.log_statistics();
+
+    std::cout << std::endl;
+
+    // -- 14. Performance Summary -----------------------------------------------
     perf_mgr.log_summary();
 
     std::cout << std::endl;
 
-    // -- 14. Full Pipeline Summary (Sprint 8) ----------------------------------
+    // -- 15. Full Pipeline Summary (Sprint 9) ----------------------------------
     {
         std::ostringstream oss;
         oss << "============================================" << std::endl
@@ -334,7 +444,8 @@ int main() {
             << "     -> Batch GPU Processor" << std::endl
             << "     -> GPU Compute Engine (batch-aware FIFO)" << std::endl
             << "     -> AI Inference Engine" << std::endl
-            << "     -> Optimized Video Output";
+            << "     -> Optimized Video Output" << std::endl
+            << "     -> Resource Manager (centralized)";
         LIZ_INFO(oss.str());
     }
 

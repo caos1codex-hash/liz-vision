@@ -38,6 +38,10 @@ add_library(liz-engine
     performance/TaskExecutor.cpp
     performance/BatchProcessor.cpp
     performance/PerformanceManager.cpp
+    resources/Resource.cpp
+    resources/ResourceHandle.cpp
+    resources/ResourceCache.cpp
+    resources/ResourceManager.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)
