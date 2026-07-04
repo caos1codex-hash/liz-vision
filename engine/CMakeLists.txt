@@ -14,12 +14,16 @@ add_library(liz-engine
     video/VideoFrame.cpp
     video/VideoDecoder.cpp
     video/VideoPipeline.cpp
+    video/ffmpeg/FFmpegDecoder.cpp
     ai/AIProcessor.cpp
     ai/AIContext.cpp
     ai/AIPipeline.cpp
+    gpu/GPUDevice.cpp
+    gpu/GPUContext.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)
 
-# Future sprints will add:
-#   - gpu/, memory/ subdirectories
+# Future sprints:
+#   - memory/ subdirectory
+#   - #ifdef WITH_FFMPEG: link ffmpeg libraries

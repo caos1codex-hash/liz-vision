@@ -7,14 +7,12 @@
 
 namespace liz {
 
-// ── Public API ────────────────────────────────────────────────────────────────
+// ── Batch mode (Sprint 2 API — preserved) ─────────────────────────────────────
 PipelineStats VideoPipeline::run(Engine& engine, const DecodeRequest& request) {
-    // Reset stats
     stats_ = PipelineStats{};
 
-    LIZ_INFO("========== VideoPipeline START ==========");
+    LIZ_INFO("========== VideoPipeline START (batch) ==========");
 
-    // ── Phase 1: Decode ───────────────────────────────────────────────────────
     LIZ_INFO("[Phase 1/3] Decoding video frames...");
 
     auto decode_start = std::chrono::steady_clock::now();
@@ -41,11 +39,9 @@ PipelineStats VideoPipeline::run(Engine& engine, const DecodeRequest& request) {
         LIZ_INFO(oss.str());
     }
 
-    // ── Phase 2: Submit tasks ─────────────────────────────────────────────────
     LIZ_INFO("[Phase 2/3] Submitting frame tasks to scheduler...");
 
     for (const auto& frame : result.frames) {
-        // Capture frame info by value so the lambda owns its data.
         auto fid = frame.frame_id();
         auto fw  = frame.width();
         auto fh  = frame.height();
@@ -74,19 +70,15 @@ PipelineStats VideoPipeline::run(Engine& engine, const DecodeRequest& request) {
         LIZ_INFO(oss.str());
     }
 
-    // ── Phase 3: Execute ──────────────────────────────────────────────────────
     LIZ_INFO("[Phase 3/3] Executing pipeline tasks...");
 
     auto exec_start = std::chrono::steady_clock::now();
-
     auto executed = engine.run_pending();
-
     auto exec_end = std::chrono::steady_clock::now();
     stats_.execution_time_ms =
         std::chrono::duration<double, std::milli>(exec_end - exec_start).count();
 
     stats_.tasks_completed = executed;
-    // tasks_failed = submitted - completed (for simulated pass-through all succeed)
     stats_.tasks_failed = stats_.tasks_submitted - executed;
 
     {
@@ -96,7 +88,6 @@ PipelineStats VideoPipeline::run(Engine& engine, const DecodeRequest& request) {
         LIZ_INFO(oss.str());
     }
 
-    // ── Summary ───────────────────────────────────────────────────────────────
     {
         std::ostringstream oss;
         oss << "Pipeline complete: "
@@ -109,7 +100,110 @@ PipelineStats VideoPipeline::run(Engine& engine, const DecodeRequest& request) {
         LIZ_INFO(oss.str());
     }
 
-    LIZ_INFO("========== VideoPipeline END ==========");
+    LIZ_INFO("========== VideoPipeline END (batch) ==========");
+    return stats_;
+}
+
+// ── Streaming mode (Sprint 4 — frame-by-frame with GPU routing) ───────────────
+PipelineStats VideoPipeline::run_streaming(
+        Engine& engine,
+        const std::string& file_path,
+        GPUContext& gpu_ctx,
+        std::function<void(const VideoFrame&, GPUContext&)> process_fn)
+{
+    stats_ = PipelineStats{};
+    stats_.streaming_mode = true;
+    stats_.gpu_routed = gpu_ctx.is_initialized();
+
+    LIZ_INFO("========== VideoPipeline START (streaming) ==========");
+
+    // ── Open file via FFmpegDecoder ───────────────────────────────────────────
+    FFmpegDecoder ffmpeg;
+    auto open_result = ffmpeg.open(file_path);
+
+    if (!open_result.success) {
+        LIZ_ERROR("VideoPipeline: failed to open '" + file_path + "' — " + open_result.error_msg);
+        LIZ_INFO("========== VideoPipeline ABORTED ==========");
+        return stats_;
+    }
+
+    if (open_result.using_stub) {
+        LIZ_INFO("VideoPipeline: using stub decoder (FFmpeg not linked)");
+    }
+
+    {
+        std::ostringstream oss;
+        oss << "VideoPipeline: opened '" << file_path << "' — "
+            << open_result.width << "x" << open_result.height
+            << " @ " << open_result.fps << " fps, "
+            << open_result.frame_count << " frames";
+        LIZ_INFO(oss.str());
+    }
+
+    // ── Stream frames one-by-one ──────────────────────────────────────────────
+    auto total_start = std::chrono::steady_clock::now();
+    std::uint32_t frame_idx = 0;
+
+    while (auto frame = ffmpeg.decode_next_frame()) {
+        // Extract all values BEFORE moving the frame into the lambda.
+        std::uint32_t fid   = frame->frame_id();
+        std::uint32_t fw    = frame->width();
+        std::uint32_t fh    = frame->height();
+        double        fts   = frame->timestamp_ms();
+        std::size_t   fsize = frame->data_size_bytes();
+
+        // Upload to GPU context (routing decision logged inside).
+        auto gpu_handle = gpu_ctx.upload_frame(*frame);
+
+        ++stats_.frames_received;
+
+        // Submit task for this frame.
+        engine.submit_task(
+            "Stream Frame #" + std::to_string(fid),
+            [fid, fw, fh, fts, fsize, gpu_handle]() {
+                std::ostringstream oss;
+                oss << "Streaming Frame #" << fid
+                    << " [" << fw << "x" << fh << "]"
+                    << " ts=" << fts << "ms"
+                    << " size=" << fsize << " bytes"
+                    << " GPU=" << (gpu_handle ? "uploaded" : "skipped");
+                LIZ_INFO(oss.str());
+                return true;
+            }
+        );
+
+        // Release GPU memory for this frame after task submission.
+        // (In streaming mode the task doesn't do GPU work — GPU routing
+        //  is logged during upload, and memory is released here.)
+        if (gpu_handle) {
+            gpu_ctx.release_memory(gpu_handle);
+        }
+        ++stats_.tasks_submitted;
+
+        // Execute immediately (true streaming: 1 frame → process → next).
+        engine.run_next();
+        ++frame_idx;
+    }
+
+    auto total_end = std::chrono::steady_clock::now();
+    stats_.execution_time_ms =
+        std::chrono::duration<double, std::milli>(total_end - total_start).count();
+    stats_.tasks_completed = stats_.tasks_submitted;  // streaming: immediate execution
+
+    // ── Summary ───────────────────────────────────────────────────────────────
+    {
+        std::ostringstream oss;
+        oss << "Streaming pipeline complete: "
+            << stats_.frames_received << " frames streamed | "
+            << stats_.tasks_submitted << " tasks | "
+            << stats_.tasks_completed << " completed | "
+            << "gpu=" << (stats_.gpu_routed ? "routed" : "bypass") << " | "
+            << "time=" << stats_.execution_time_ms << "ms";
+        LIZ_INFO(oss.str());
+    }
+
+    ffmpeg.close();
+    LIZ_INFO("========== VideoPipeline END (streaming) ==========");
     return stats_;
 }
 
