@@ -88,6 +88,9 @@ EngineStatistics DiagnosticsManager::statistics() const {
         stats.pipeline_nodes       = provider_->pipeline_nodes;
         stats.pipeline_exec_time_ms = provider_->pipeline_exec_time_ms;
         stats.pipeline_errors      = provider_->pipeline_errors;
+        stats.active_project       = provider_->active_project;
+        stats.open_projects        = provider_->open_projects;
+        stats.saved_projects       = provider_->saved_projects;
     }
 
     return stats;
@@ -127,6 +130,7 @@ void DiagnosticsManager::print_report() const {
     oss << "  GPU Commands:  " << stats.gpu_commands << std::endl;
     oss << "  Assets:        " << stats.assets_loaded << " (" << stats.assets_active << " active)" << std::endl;
     oss << "  Pipelines:     " << stats.pipelines_active << " active (" << stats.pipeline_nodes << " nodes)" << std::endl;
+    oss << "  Projects:      " << stats.active_project << " active (" << stats.open_projects << " open, " << stats.saved_projects << " saved)" << std::endl;
 
     // Latest snapshot performance metrics.
     oss << std::endl;

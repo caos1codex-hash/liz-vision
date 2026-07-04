@@ -1,5 +1,5 @@
 // LIZ Vision — Desktop Application Entry Point
-// Sprint 1-16: Engine + all module demos.
+// Sprint 1-17: Engine + all module demos.
 
 #include "engine/core/Engine.h"
 #include "engine/core/Logger.h"
@@ -8,6 +8,7 @@
 #include "demo/Sprint14Demo.h"
 #include "demo/Sprint15Demo.h"
 #include "demo/Sprint16Demo.h"
+#include "demo/Sprint17Demo.h"
 
 #include <iostream>
 #include <memory>
@@ -30,6 +31,7 @@ int main() {
     registry.register_demo(std::make_unique<Sprint14Demo>());
     registry.register_demo(std::make_unique<Sprint15Demo>());
     registry.register_demo(std::make_unique<Sprint16Demo>());
+    registry.register_demo(std::make_unique<Sprint17Demo>());
 
     // -- List registered demos --
     {

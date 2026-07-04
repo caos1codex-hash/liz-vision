@@ -235,3 +235,54 @@ Engine (GPU / AI / Video / ...)
 | `destroy_pipeline(name)` | Destroy a pipeline |
 | `pipeline_statistics(name)` | Get pipeline statistics |
 | `list_pipelines()` | List all pipelines |
+
+## Project System
+
+The Project System manages complete LIZ Vision projects. Each project
+contains identity, metadata, settings, and lifecycle state. Projects
+integrate with pipelines, assets, and diagnostics.
+
+### Creating a Project via Public API
+
+```cpp
+// Create a project.
+liz::ProjectInfo proj_info;
+api.create_project("My Video Project", proj_info);
+// proj_info.uuid, proj_info.name, proj_info.state are populated.
+
+// Open the project.
+api.open_project(proj_info.uuid);
+
+// Modify metadata (through the Project object — internal API).
+// Save the project (simulated).
+api.save_project(proj_info.uuid);
+
+// Close the project.
+api.close_project(proj_info.uuid);
+
+// Destroy the project completely.
+api.destroy_project(proj_info.uuid);
+```
+
+### Project API (EngineAPI)
+
+| Method | Description |
+|--------|-------------|
+| `create_project(name, info)` | Create a new project |
+| `open_project(uuid)` | Open a project |
+| `save_project(uuid)` | Save a project (simulated) |
+| `close_project(uuid)` | Close a project |
+| `destroy_project(uuid)` | Destroy a project |
+| `current_project(info)` | Get the active project |
+| `project_statistics()` | Get project system statistics |
+| `list_projects()` | List all projects |
+
+### Project States
+
+| State | Description |
+|-------|-------------|
+| `Created` | Project has been created |
+| `Opened` | Project is open for editing |
+| `Modified` | Project has unsaved changes |
+| `Saved` | Project has been saved |
+| `Closed` | Project is closed |

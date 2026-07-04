@@ -4,6 +4,56 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 17 — Project System Foundation (2026-07-05)
+
+Implemented the official Project system for the LIZ Vision engine.
+A Project represents a complete LIZ Vision project with identity,
+metadata, settings, and lifecycle management. Everything is
+in-memory only — no persistence.
+
+**New module:** `engine/project/`
+
+- `ProjectTypes` — enum `ProjectState` (5 states: Created, Opened, Modified, Saved, Closed) with inline string converter
+- `ProjectMetadata` — organizational data: company, website, description, tags, author, version
+- `ProjectSettings` — project configuration: GPU, diagnostics, pipeline auto-validation, autosave, thread count, language, theme, batch size
+- `ProjectStatistics` — cumulative stats: projects created/open/saved/closed, active project, assets, pipelines, services, runtime
+- `Project` — core project class with UUID, name, description, author, version, state, timestamps, metadata, settings
+- `ProjectManager` — central lifecycle manager: create, open, save, close, destroy, current_project, find, list, statistics, EventBus integration
+
+**Integration:**
+
+- EventBus: 5 new events (ProjectCreated, ProjectOpened, ProjectSaved, ProjectClosed, ProjectDestroyed)
+- Service Registry: ProjectManager registered as official service (ServiceType::ProjectManager)
+- Diagnostics: active_project, open_projects, saved_projects shown in EngineStatistics and DiagnosticsManager reports
+- Public API: `create_project()`, `open_project()`, `save_project()`, `close_project()`, `destroy_project()`, `current_project()`, `project_statistics()`, `list_projects()`
+- ApiTypes: new `ProjectInfo`, `ApiProjectStatistics`, `ProjectInfoList` types
+
+**Architecture:**
+
+```
+Application
+    |
+    v
+Public API (EngineBuilder / EngineAPI / EngineSession)
+    |
+    v
+ProjectManager (lifecycle)
+    |
+    v
+Project (identity + metadata + settings)
+    |
+    v
+PipelineGraph, AssetManager, Diagnostics (existing subsystems)
+```
+
+**Backward compatibility:**
+- All sprints 1-16 fully functional
+- LegacyDemo, Sprint14Demo, Sprint15Demo, Sprint16Demo unmodified
+
+**Commit:** `Implement Project System Foundation (Sprint 17)`
+
+---
+
 ## Sprint 16 — Pipeline Graph Foundation (2026-07-05)
 
 Created the Pipeline Graph architecture — the foundation for all future

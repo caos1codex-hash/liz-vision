@@ -22,6 +22,7 @@ class EventBus;
 class DiagnosticsDataProvider;
 class PipelineExecutor;
 class PipelineGraph;
+class ProjectManager;
 
 /// Public API facade for the LIZ Engine.
 ///
@@ -114,6 +115,32 @@ public:
     /// List all pipelines.
     PipelineInfoList list_pipelines() const;
 
+    // ── Project info ───────────────────────────────────────────────
+
+    /// Create a new project with the given name.
+    ApiResult create_project(const std::string& name, ProjectInfo& out_info);
+
+    /// Open a project by UUID.
+    ApiResult open_project(const std::string& uuid);
+
+    /// Save a project by UUID (simulated).
+    ApiResult save_project(const std::string& uuid);
+
+    /// Close a project by UUID.
+    ApiResult close_project(const std::string& uuid);
+
+    /// Destroy a project by UUID.
+    ApiResult destroy_project(const std::string& uuid);
+
+    /// Get the current active project info.  Returns NotFound if none.
+    ApiResult current_project(ProjectInfo& out_info) const;
+
+    /// Get project system statistics.
+    ApiProjectStatistics project_statistics() const;
+
+    /// List all projects.
+    ProjectInfoList list_projects() const;
+
 private:
     // Internal engine — never exposed.
     std::unique_ptr<Engine>                engine_;
@@ -123,6 +150,7 @@ private:
     std::unique_ptr<EventBus>               event_bus_;
     std::unique_ptr<DiagnosticsDataProvider> data_provider_;
     std::unique_ptr<PipelineExecutor>         pipeline_executor_;
+    std::unique_ptr<ProjectManager>            project_manager_;
 
     // Public sessions.
     std::vector<std::unique_ptr<EngineSession>> sessions_;

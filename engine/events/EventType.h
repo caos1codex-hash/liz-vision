@@ -34,6 +34,11 @@ enum class EventType {
     NodeCreated,
     NodeExecuted,
     PipelineFinished,
+    ProjectCreated,
+    ProjectOpened,
+    ProjectSaved,
+    ProjectClosed,
+    ProjectDestroyed,
     Custom
 };
 
@@ -65,6 +70,11 @@ inline const char* event_type_to_string(EventType type) {
         case EventType::NodeCreated:           return "NodeCreated";
         case EventType::NodeExecuted:          return "NodeExecuted";
         case EventType::PipelineFinished:      return "PipelineFinished";
+        case EventType::ProjectCreated:        return "ProjectCreated";
+        case EventType::ProjectOpened:          return "ProjectOpened";
+        case EventType::ProjectSaved:            return "ProjectSaved";
+        case EventType::ProjectClosed:          return "ProjectClosed";
+        case EventType::ProjectDestroyed:        return "ProjectDestroyed";
         case EventType::Custom:                return "Custom";
     }
     return "Unknown";

@@ -96,9 +96,35 @@ struct PipelineInfo {
     bool       valid = true;
 };
 
+/// Project information exposed through the public API.
+struct ProjectInfo {
+    std::string uuid;
+    std::string name;
+    std::string state;
+    std::string author;
+    std::string version;
+};
+
+/// Project statistics exposed through the public API.
+struct ApiProjectStatistics {
+    std::size_t projects_created = 0;
+    std::size_t projects_open     = 0;
+    std::size_t projects_saved   = 0;
+    std::size_t projects_closed  = 0;
+    std::size_t active_project   = 0;
+    std::size_t assets           = 0;
+    std::size_t pipelines        = 0;
+    std::size_t services          = 0;
+    double     runtime_seconds   = 0.0;
+
+    /// Generate a formatted summary string.
+    std::string to_string() const;
+};
+
 /// List of service/asset infos returned by query methods.
 using ServiceInfoList = std::vector<ServiceInfo>;
 using AssetInfoList   = std::vector<AssetInfo>;
 using PipelineInfoList = std::vector<PipelineInfo>;
+using ProjectInfoList = std::vector<ProjectInfo>;
 
 } // namespace liz

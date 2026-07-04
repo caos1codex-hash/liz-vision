@@ -47,6 +47,11 @@ struct EngineStatistics {
     double     pipeline_exec_time_ms = 0.0;
     std::size_t pipeline_errors      = 0;
 
+    // -- Projects (Sprint 17) --
+    std::size_t active_project       = 0;
+    std::size_t open_projects        = 0;
+    std::size_t saved_projects       = 0;
+
     /// Generate a formatted summary string.
     std::string to_string() const;
 };

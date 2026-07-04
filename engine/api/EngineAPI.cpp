@@ -14,6 +14,9 @@
 #include "engine/events/EventBus.h"
 #include "engine/pipeline/PipelineExecutor.h"
 #include "engine/pipeline/PipelineGraph.h"
+#include "engine/project/ProjectManager.h"
+#include "engine/project/Project.h"
+#include "engine/project/ProjectTypes.h"
 
 #include <algorithm>
 #include <chrono>
@@ -112,7 +115,17 @@ ApiResult EngineAPI::initialize(const EngineBuilder& config) {
 
     service_registry_->register_service("PipelineExecutor", ServiceType::PipelineExecutor, "1.0.0");
 
-    // 7. Create an implicit default session.
+    // 7. Create ProjectManager.
+    project_manager_ = std::make_unique<ProjectManager>();
+    project_manager_->initialize();
+
+    if (event_bus_) {
+        project_manager_->set_event_bus(event_bus_.get());
+    }
+
+    service_registry_->register_service("ProjectManager", ServiceType::ProjectManager, "1.0.0");
+
+    // 8. Create an implicit default session.
     SessionInfo default_session;
     create_session(default_session);
 
@@ -134,6 +147,11 @@ ApiResult EngineAPI::shutdown() {
     sessions_.clear();
 
     // Shutdown subsystems in reverse order.
+    if (project_manager_) {
+        project_manager_->shutdown();
+        project_manager_.reset();
+    }
+
     if (pipeline_executor_) {
         pipeline_executor_->shutdown();
         pipeline_executor_.reset();
@@ -388,6 +406,153 @@ PipelineInfoList EngineAPI::list_pipelines() const {
         info.execution_time_ms = stats.execution_time_ms;
         info.valid = stats.validation_result;
         result.push_back(info);
+    }
+    return result;
+}
+
+// ── Project info ──────────────────────────────────────────────────
+
+ApiResult EngineAPI::create_project(const std::string& name, ProjectInfo& out_info) {
+    if (!initialized_) return ApiResult::Failed;
+
+    auto* proj = project_manager_->create_project(name);
+    if (!proj) {
+        return ApiResult::AlreadyExists;
+    }
+
+    out_info.uuid    = proj->uuid();
+    out_info.name    = proj->name();
+    out_info.state   = project_state_to_string(proj->state());
+    out_info.author  = proj->author();
+    out_info.version = proj->version();
+
+    std::ostringstream oss;
+    oss << "EngineAPI: project created — name=" << name;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::open_project(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!project_manager_->open_project(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: project opened — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::save_project(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!project_manager_->save_project(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: project saved — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::close_project(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!project_manager_->close_project(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: project closed — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::destroy_project(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!project_manager_->destroy_project(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: project destroyed — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::current_project(ProjectInfo& out_info) const {
+    if (!project_manager_) return ApiResult::Failed;
+
+    auto* proj = project_manager_->current_project();
+    if (!proj) {
+        return ApiResult::NotFound;
+    }
+
+    out_info.uuid    = proj->uuid();
+    out_info.name    = proj->name();
+    out_info.state   = project_state_to_string(proj->state());
+    out_info.author  = proj->author();
+    out_info.version = proj->version();
+
+    return ApiResult::Success;
+}
+
+ApiProjectStatistics EngineAPI::project_statistics() const {
+    ApiProjectStatistics stats;
+
+    if (!project_manager_) return stats;
+
+    auto proj_stats = project_manager_->statistics();
+    stats.projects_created = proj_stats.projects_created;
+    stats.projects_open    = proj_stats.projects_open;
+    stats.projects_saved  = proj_stats.projects_saved;
+    stats.projects_closed = proj_stats.projects_closed;
+    stats.active_project   = proj_stats.active_project;
+    stats.assets          = proj_stats.assets;
+    stats.pipelines       = proj_stats.pipelines;
+    stats.services        = proj_stats.services;
+    stats.runtime_seconds = proj_stats.runtime_seconds;
+
+    // Populate from existing subsystems.
+    if (asset_manager_) {
+        auto asset_stats = asset_manager_->statistics();
+        stats.assets = asset_stats.active_assets;
+    }
+    if (pipeline_executor_) {
+        stats.pipelines = pipeline_executor_->pipeline_count();
+    }
+    if (service_registry_) {
+        stats.services = service_registry_->count();
+    }
+
+    return stats;
+}
+
+ProjectInfoList EngineAPI::list_projects() const {
+    ProjectInfoList result;
+    if (!project_manager_) return result;
+
+    auto names = project_manager_->list_projects();
+    for (const auto& name : names) {
+        auto* proj = project_manager_->find_project_by_name(name);
+        if (proj) {
+            ProjectInfo info;
+            info.uuid    = proj->uuid();
+            info.name    = proj->name();
+            info.state   = project_state_to_string(proj->state());
+            info.author  = proj->author();
+            info.version = proj->version();
+            result.push_back(info);
+        }
     }
     return result;
 }
