@@ -4,6 +4,55 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 19 — Cloud Sync Foundation (2026-07-05)
+
+Implemented the Cloud Sync Foundation for the LIZ Vision engine. An
+offline-first simulated cloud synchronization system, fully decoupled
+from the engine core. Items are enqueued into a FIFO queue and processed
+with a simulated 70% Synced / 30% Conflict probability distribution.
+
+**New module:** `engine/cloud/`
+
+- `CloudTypes` — enum `CloudSyncState` (5 states: Pending, Syncing, Synced, Conflict, Failed) and `CloudSyncType` (5 types: Project, Workspace, Asset, Pipeline, Settings) with inline string converters
+- `CloudSyncItem` — sync item with UUID, name, type, state, timestamps, error message; non-copyable, movable
+- `CloudSyncQueue` — FIFO queue with enqueue/dequeue/peek/size/clear operations
+- `CloudSyncManager` — central sync manager: enqueue, process_all, process_item, 70/30 simulation, EventBus integration, statistics
+
+**Integration:**
+
+- EventBus: 4 new events (CloudSyncStarted, CloudSyncCompleted, CloudSyncFailed, CloudConflictDetected)
+- Service Registry: CloudSyncManager registered as official service (ServiceType::CloudSyncManager)
+- Diagnostics: cloud_pending, cloud_synced, cloud_conflicts, cloud_sync_time_ms shown in EngineStatistics and DiagnosticsManager reports
+- Public API: `cloud_statistics()`, `list_cloud_items()`
+- ApiTypes: new `CloudSyncInfo`, `ApiCloudStatistics`, `CloudSyncInfoList` types
+
+**Architecture:**
+
+```
+Application
+    |
+    v
+Public API (EngineAPI)
+    |
+    v
+CloudSyncManager (lifecycle)
+    |
+    v
+CloudSyncQueue (FIFO)
+    |
+    v
+CloudSyncItem (state machine: Pending → Syncing → Synced/Conflict)
+    |
+    v
+EventBus (CloudSyncStarted / CloudSyncCompleted / CloudConflictDetected)
+```
+
+**Backward compatibility:**
+- All sprints 1-18 fully functional
+- No modifications to GPU / Tensor / Pipeline / Asset / Project / Workspace internals
+
+---
+
 ## Sprint 18 — Workspace Foundation (2026-07-05)
 
 Implemented the Workspace system for the LIZ Vision engine. A Workspace

@@ -143,11 +143,33 @@ struct ApiWorkspaceStatistics {
     std::string to_string() const;
 };
 
+/// Cloud sync item information exposed through the public API.
+struct CloudSyncInfo {
+    std::string uuid;
+    std::string name;
+    std::string type;
+    std::string state;
+    std::string error_message;
+};
+
+/// Cloud statistics exposed through the public API.
+struct ApiCloudStatistics {
+    std::size_t items_pending  = 0;
+    std::size_t items_synced   = 0;
+    std::size_t items_conflict = 0;
+    std::size_t items_failed   = 0;
+    double     total_sync_time_ms = 0.0;
+
+    /// Generate a formatted summary string.
+    std::string to_string() const;
+};
+
 /// List of service/asset infos returned by query methods.
 using ServiceInfoList = std::vector<ServiceInfo>;
 using AssetInfoList   = std::vector<AssetInfo>;
 using PipelineInfoList = std::vector<PipelineInfo>;
 using ProjectInfoList = std::vector<ProjectInfo>;
 using WorkspaceInfoList = std::vector<WorkspaceInfo>;
+using CloudSyncInfoList = std::vector<CloudSyncInfo>;
 
 } // namespace liz

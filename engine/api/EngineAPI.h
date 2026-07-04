@@ -24,6 +24,7 @@ class PipelineExecutor;
 class PipelineGraph;
 class ProjectManager;
 class WorkspaceManager;
+class CloudSyncManager;
 
 /// Public API facade for the LIZ Engine.
 ///
@@ -174,6 +175,14 @@ public:
     /// Remove a project from a workspace.
     ApiResult remove_project_from_workspace(const std::string& workspace_uuid, const std::string& project_uuid);
 
+    // ── Cloud sync info ────────────────────────────────────────────
+
+    /// Get cloud sync statistics.
+    ApiCloudStatistics cloud_statistics() const;
+
+    /// List all processed cloud sync items.
+    CloudSyncInfoList list_cloud_items() const;
+
 private:
     // Internal engine — never exposed.
     std::unique_ptr<Engine>                engine_;
@@ -185,6 +194,7 @@ private:
     std::unique_ptr<PipelineExecutor>         pipeline_executor_;
     std::unique_ptr<ProjectManager>            project_manager_;
     std::unique_ptr<WorkspaceManager>          workspace_manager_;
+    std::unique_ptr<CloudSyncManager>          cloud_sync_manager_;
 
     // Public sessions.
     std::vector<std::unique_ptr<EngineSession>> sessions_;

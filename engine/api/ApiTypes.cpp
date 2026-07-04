@@ -49,4 +49,16 @@ std::string ApiWorkspaceStatistics::to_string() const {
     return oss.str();
 }
 
+std::string ApiCloudStatistics::to_string() const {
+    std::ostringstream oss;
+    oss << "CloudStatistics{"
+        << "pending=" << items_pending
+        << ", synced=" << items_synced
+        << ", conflict=" << items_conflict
+        << ", failed=" << items_failed
+        << ", sync_time=" << std::fixed << std::setprecision(1) << total_sync_time_ms << "ms"
+        << "}";
+    return oss.str();
+}
+
 } // namespace liz

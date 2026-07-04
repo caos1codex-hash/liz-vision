@@ -49,7 +49,11 @@ std::string EngineStatistics::to_string() const {
         << " saved_projects=" << saved_projects
         << " active_workspace=" << active_workspace
         << " loaded_workspaces=" << loaded_workspaces
-        << " workspace_projects=" << workspace_projects;
+        << " workspace_projects=" << workspace_projects
+        << " cloud_pending=" << cloud_pending
+        << " cloud_synced=" << cloud_synced
+        << " cloud_conflicts=" << cloud_conflicts
+        << " cloud_sync_time=" << cloud_sync_time_ms << "ms";
     return oss.str();
 }
 

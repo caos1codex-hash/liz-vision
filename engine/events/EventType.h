@@ -46,6 +46,10 @@ enum class EventType {
     WorkspaceDestroyed,
     ProjectAddedToWorkspace,
     ProjectRemovedFromWorkspace,
+    CloudSyncStarted,
+    CloudSyncCompleted,
+    CloudSyncFailed,
+    CloudConflictDetected,
     Custom
 };
 
@@ -89,6 +93,10 @@ inline const char* event_type_to_string(EventType type) {
         case EventType::WorkspaceDestroyed:        return "WorkspaceDestroyed";
         case EventType::ProjectAddedToWorkspace:  return "ProjectAddedToWorkspace";
         case EventType::ProjectRemovedFromWorkspace: return "ProjectRemovedFromWorkspace";
+        case EventType::CloudSyncStarted:        return "CloudSyncStarted";
+        case EventType::CloudSyncCompleted:       return "CloudSyncCompleted";
+        case EventType::CloudSyncFailed:          return "CloudSyncFailed";
+        case EventType::CloudConflictDetected:     return "CloudConflictDetected";
         case EventType::Custom:                return "Custom";
     }
     return "Unknown";

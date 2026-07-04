@@ -78,6 +78,9 @@ add_library(liz-engine
     workspace/WorkspacePreferences.cpp
     workspace/WorkspaceStatistics.cpp
     workspace/WorkspaceManager.cpp
+    cloud/CloudSyncItem.cpp
+    cloud/CloudSyncQueue.cpp
+    cloud/CloudSyncManager.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)

@@ -64,6 +64,12 @@ public:
     std::size_t active_workspace     = 0;
     std::size_t loaded_workspaces    = 0;
     std::size_t workspace_projects   = 0;
+
+    // -- Cloud (Sprint 19) --
+    std::size_t cloud_pending     = 0;
+    std::size_t cloud_synced      = 0;
+    std::size_t cloud_conflicts   = 0;
+    double     cloud_sync_time_ms = 0.0;
 };
 
 /// Central diagnostics and profiling manager for the LIZ Vision engine.

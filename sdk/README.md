@@ -339,3 +339,53 @@ api.destroy_workspace(ws_info.uuid);
 | `Opened` | Workspace is open |
 | `Active` | Workspace is the active one |
 | `Closed` | Workspace is closed |
+
+## Cloud Sync System
+
+The Cloud Sync System provides offline-first simulated cloud synchronization.
+Items are enqueued into a FIFO queue and processed with simulated network
+behavior (70% Synced, 30% Conflict). The system is fully decoupled from
+the engine core and integrates via EventBus, ServiceRegistry, and Diagnostics.
+
+### Cloud Sync API (EngineAPI)
+
+| Method | Description |
+|--------|-------------|
+| `cloud_statistics()` | Get cloud sync statistics (pending, synced, conflicts, sync time) |
+| `list_cloud_items()` | List all processed cloud sync items |
+
+### Cloud Sync Example
+
+```cpp
+// Get cloud statistics.
+auto stats = api.cloud_statistics();
+// stats.items_synced    -> number of synced items
+// stats.items_conflict -> number of conflicts
+// stats.items_pending  -> number of pending items
+
+// List processed cloud items.
+auto items = api.list_cloud_items();
+for (const auto& item : items) {
+    // item.uuid, item.name, item.type, item.state, item.error_message
+}
+```
+
+### Cloud Sync States
+
+| State | Description |
+|-------|-------------|
+| `Pending` | Item is queued and waiting for sync |
+| `Syncing` | Item is currently being synced |
+| `Synced` | Item successfully synced to cloud |
+| `Conflict` | Version conflict detected |
+| `Failed` | Sync operation failed |
+
+### Cloud Sync Types
+
+| Type | Description |
+|------|-------------|
+| `Project` | Project data sync |
+| `Workspace` | Workspace configuration sync |
+| `Asset` | Asset file sync |
+| `Pipeline` | Pipeline graph sync |
+| `Settings` | Application settings sync |

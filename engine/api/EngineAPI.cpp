@@ -20,6 +20,9 @@
 #include "engine/workspace/WorkspaceManager.h"
 #include "engine/workspace/Workspace.h"
 #include "engine/workspace/WorkspaceTypes.h"
+#include "engine/cloud/CloudSyncManager.h"
+#include "engine/cloud/CloudSyncItem.h"
+#include "engine/cloud/CloudTypes.h"
 
 #include <algorithm>
 #include <chrono>
@@ -138,7 +141,17 @@ ApiResult EngineAPI::initialize(const EngineBuilder& config) {
 
     service_registry_->register_service("WorkspaceManager", ServiceType::WorkspaceManager, "1.0.0");
 
-    // 9. Create an implicit default session.
+    // 9. Create CloudSyncManager.
+    cloud_sync_manager_ = std::make_unique<CloudSyncManager>();
+    cloud_sync_manager_->initialize();
+
+    if (event_bus_) {
+        cloud_sync_manager_->set_event_bus(event_bus_.get());
+    }
+
+    service_registry_->register_service("CloudSyncManager", ServiceType::CloudSyncManager, "1.0.0");
+
+    // 10. Create an implicit default session.
     SessionInfo default_session;
     create_session(default_session);
 
@@ -163,6 +176,11 @@ ApiResult EngineAPI::shutdown() {
     if (project_manager_) {
         project_manager_->shutdown();
         project_manager_.reset();
+    }
+
+    if (cloud_sync_manager_) {
+        cloud_sync_manager_->shutdown();
+        cloud_sync_manager_.reset();
     }
 
     if (workspace_manager_) {
@@ -740,6 +758,40 @@ ApiResult EngineAPI::remove_project_from_workspace(const std::string& workspace_
     LIZ_INFO(oss.str());
 
     return ApiResult::Success;
+}
+
+// ── Cloud sync info ───────────────────────────────────────────────
+
+ApiCloudStatistics EngineAPI::cloud_statistics() const {
+    ApiCloudStatistics stats;
+
+    if (!cloud_sync_manager_) return stats;
+
+    stats.items_pending  = cloud_sync_manager_->pending_count();
+    stats.items_synced   = cloud_sync_manager_->synced_count();
+    stats.items_conflict = cloud_sync_manager_->conflict_count();
+    stats.items_failed   = cloud_sync_manager_->failed_count();
+    stats.total_sync_time_ms = cloud_sync_manager_->total_sync_time_ms();
+
+    return stats;
+}
+
+CloudSyncInfoList EngineAPI::list_cloud_items() const {
+    CloudSyncInfoList result;
+    if (!cloud_sync_manager_) return result;
+
+    const auto& items = cloud_sync_manager_->processed_items();
+    for (const auto& item : items) {
+        CloudSyncInfo info;
+        info.uuid          = item.uuid();
+        info.name          = item.name();
+        info.type          = cloud_sync_type_to_string(item.type());
+        info.state         = cloud_sync_state_to_string(item.state());
+        info.error_message = item.error_message();
+        result.push_back(info);
+    }
+
+    return result;
 }
 
 } // namespace liz

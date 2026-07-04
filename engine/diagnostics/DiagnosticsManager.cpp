@@ -94,6 +94,10 @@ EngineStatistics DiagnosticsManager::statistics() const {
         stats.active_workspace     = provider_->active_workspace;
         stats.loaded_workspaces    = provider_->loaded_workspaces;
         stats.workspace_projects   = provider_->workspace_projects;
+        stats.cloud_pending        = provider_->cloud_pending;
+        stats.cloud_synced         = provider_->cloud_synced;
+        stats.cloud_conflicts      = provider_->cloud_conflicts;
+        stats.cloud_sync_time_ms   = provider_->cloud_sync_time_ms;
     }
 
     return stats;
@@ -135,6 +139,7 @@ void DiagnosticsManager::print_report() const {
     oss << "  Pipelines:     " << stats.pipelines_active << " active (" << stats.pipeline_nodes << " nodes)" << std::endl;
     oss << "  Projects:      " << stats.active_project << " active (" << stats.open_projects << " open, " << stats.saved_projects << " saved)" << std::endl;
     oss << "  Workspaces:    " << stats.active_workspace << " active (" << stats.loaded_workspaces << " loaded, " << stats.workspace_projects << " projects)" << std::endl;
+    oss << "  Cloud:         " << stats.cloud_synced << " synced, " << stats.cloud_conflicts << " conflicts, " << stats.cloud_pending << " pending (" << std::fixed << std::setprecision(1) << stats.cloud_sync_time_ms << " ms)" << std::endl;
 
     // Latest snapshot performance metrics.
     oss << std::endl;

@@ -21,6 +21,7 @@ enum class ServiceType {
     PipelineExecutor,
     ProjectManager,
     WorkspaceManager,
+    CloudSyncManager,
     Unknown
 };
 
@@ -42,6 +43,7 @@ inline const char* service_type_to_string(ServiceType type) {
         case ServiceType::PipelineExecutor: return "PipelineExecutor";
         case ServiceType::ProjectManager: return "ProjectManager";
         case ServiceType::WorkspaceManager: return "WorkspaceManager";
+        case ServiceType::CloudSyncManager: return "CloudSyncManager";
         case ServiceType::Unknown:         return "Unknown";
     }
     return "Unknown";
