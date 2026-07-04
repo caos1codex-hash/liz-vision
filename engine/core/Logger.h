@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 #include <string_view>
 
@@ -16,7 +17,7 @@ enum class LogLevel {
 };
 
 /// Singleton logger that writes formatted messages to the console.
-/// Thread-safety will be added in a future sprint when multithreading is introduced.
+/// Thread-safe: uses a mutex to serialize output from multiple threads.
 class Logger {
 public:
     /// Retrieve the global Logger instance.
@@ -38,7 +39,8 @@ private:
     /// Convert a LogLevel to a short tag string (e.g. "INFO").
     static const char* level_tag(LogLevel level);
 
-    LogLevel min_level_ = LogLevel::Info;
+    LogLevel      min_level_ = LogLevel::Info;
+    mutable std::mutex mutex_;
 };
 
 } // namespace liz

@@ -24,9 +24,15 @@ add_library(liz-engine
     ai/inference/ModelLoader.cpp
     ai/inference/InferenceEngine.cpp
     ai/models/ModelRegistry.cpp
+    performance/ThreadPool.cpp
+    performance/FrameQueue.cpp
+    performance/TaskExecutor.cpp
+    performance/BatchProcessor.cpp
+    performance/PerformanceManager.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)
+target_link_libraries(liz-engine PUBLIC Threads::Threads)
 
 # Future sprints:
 #   - memory/ subdirectory

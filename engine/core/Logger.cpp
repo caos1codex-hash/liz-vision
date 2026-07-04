@@ -21,6 +21,8 @@ void Logger::log(LogLevel level,
                  std::string_view /*file*/,
                  int /*line*/,
                  std::string_view message) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     if (level < min_level_) {
         return;
     }
