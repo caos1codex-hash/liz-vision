@@ -73,4 +73,16 @@ std::string ApiPluginStatistics::to_string() const {
     return oss.str();
 }
 
+std::string ApiJobStatistics::to_string() const {
+    std::ostringstream oss;
+    oss << "JobStatistics{"
+        << "created=" << jobs_created
+        << ", running=" << jobs_running
+        << ", completed=" << jobs_completed
+        << ", failed=" << jobs_failed
+        << ", total_exec_time=" << std::fixed << std::setprecision(1) << total_execution_time_ms << "ms"
+        << "}";
+    return oss.str();
+}
+
 } // namespace liz

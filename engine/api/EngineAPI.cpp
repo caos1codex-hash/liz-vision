@@ -27,6 +27,10 @@
 #include "engine/pluginloader/PluginDescriptor.h"
 #include "engine/pluginloader/PluginManifest.h"
 #include "engine/pluginloader/PluginLoaderStatistics.h"
+#include "engine/jobs/JobManager.h"
+#include "engine/jobs/JobTypes.h"
+#include "engine/jobs/Job.h"
+#include "engine/jobs/JobStatistics.h"
 
 #include <algorithm>
 #include <chrono>
@@ -165,7 +169,17 @@ ApiResult EngineAPI::initialize(const EngineBuilder& config) {
 
     service_registry_->register_service("PluginLoader", ServiceType::PluginLoader, "1.0.0");
 
-    // 11. Create an implicit default session.
+    // 11. Create JobManager.
+    job_manager_ = std::make_unique<JobManager>();
+    job_manager_->initialize(&engine_->scheduler());
+
+    if (event_bus_) {
+        job_manager_->set_event_bus(event_bus_.get());
+    }
+
+    service_registry_->register_service("JobManager", ServiceType::JobManager, "1.0.0");
+
+    // 12. Create an implicit default session.
     SessionInfo default_session;
     create_session(default_session);
 
@@ -195,6 +209,11 @@ ApiResult EngineAPI::shutdown() {
     if (plugin_loader_) {
         plugin_loader_->shutdown();
         plugin_loader_.reset();
+    }
+
+    if (job_manager_) {
+        job_manager_->shutdown();
+        job_manager_.reset();
     }
 
     if (cloud_sync_manager_) {
@@ -896,6 +915,105 @@ ApiResult EngineAPI::unload_plugin(const std::string& uuid) {
     LIZ_INFO(oss.str());
 
     return ApiResult::Success;
+}
+
+// ── Job System info ──────────────────────────────────────────────
+
+ApiResult EngineAPI::submit_job(const std::string& name, const std::string& type, JobInfo& out_info) {
+    if (!initialized_) return ApiResult::Failed;
+    if (!job_manager_) return ApiResult::Failed;
+
+    // Parse type string to JobType.
+    JobType job_type = JobType::Custom;
+    if (type == "Render")     job_type = JobType::Render;
+    else if (type == "Inference") job_type = JobType::Inference;
+    else if (type == "Pipeline")   job_type = JobType::Pipeline;
+    else if (type == "Import")    job_type = JobType::Import;
+    else if (type == "Export")    job_type = JobType::Export;
+    else if (type == "Plugin")    job_type = JobType::Plugin;
+    else if (type == "Cloud")      job_type = JobType::Cloud;
+    else if (type == "Asset")      job_type = JobType::Asset;
+    else if (type == "Project")   job_type = JobType::Project;
+    else if (type == "Workspace") job_type = JobType::Workspace;
+
+    std::string uuid = job_manager_->submit(name, job_type);
+
+    out_info.uuid     = uuid;
+    out_info.name     = name;
+    out_info.type     = job_type_to_string(job_type);
+    out_info.priority = job_priority_to_string(JobPriority::Normal);
+    out_info.state    = job_state_to_string(JobState::Queued);
+    out_info.progress = 0;
+    out_info.duration_ms = 0.0;
+
+    std::ostringstream oss;
+    oss << "EngineAPI: job submitted — name=" << name << ", type=" << type;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::cancel_job(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+    if (!job_manager_) return ApiResult::Failed;
+
+    if (!job_manager_->cancel(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: job cancelled — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+JobInfoList EngineAPI::list_jobs() const {
+    JobInfoList result;
+    if (!job_manager_) return result;
+
+    auto completed = job_manager_->completed_jobs();
+    auto failed    = job_manager_->failed_jobs();
+
+    for (const auto* j : completed) {
+        JobInfo info;
+        info.uuid       = j->uuid();
+        info.name       = j->name();
+        info.type       = job_type_to_string(j->type());
+        info.priority   = job_priority_to_string(j->priority());
+        info.state      = job_state_to_string(j->state());
+        info.progress   = j->progress();
+        info.duration_ms = j->duration_ms();
+        result.push_back(info);
+    }
+
+    for (const auto* j : failed) {
+        JobInfo info;
+        info.uuid       = j->uuid();
+        info.name       = j->name();
+        info.type       = job_type_to_string(j->type());
+        info.priority   = job_priority_to_string(j->priority());
+        info.state      = job_state_to_string(j->state());
+        info.progress   = j->progress();
+        info.duration_ms = j->duration_ms();
+        result.push_back(info);
+    }
+
+    return result;
+}
+
+ApiJobStatistics EngineAPI::job_statistics() const {
+    ApiJobStatistics stats;
+    if (!job_manager_) return stats;
+
+    auto js = job_manager_->statistics();
+    stats.jobs_created    = js.jobs_created;
+    stats.jobs_running    = js.jobs_running;
+    stats.jobs_completed  = js.jobs_completed;
+    stats.jobs_failed     = js.jobs_failed;
+    stats.total_execution_time_ms = js.job_execution_time_ms;
+
+    return stats;
 }
 
 } // namespace liz

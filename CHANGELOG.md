@@ -4,6 +4,58 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 21 — Job System Foundation (2026-07-05)
+
+Implemented the Job System Foundation for the LIZ Vision engine. A high-level
+abstraction for executing long-running operations (render, inference, import,
+export, cloud, plugins, pipelines, resources, projects, workspaces) through
+the existing Scheduler. Does NOT replace the Scheduler or ThreadPool — works
+on top of them.
+
+**New module:** `engine/jobs/`
+
+- `JobTypes` — enums: `JobType` (11 types: Render, Inference, Pipeline, Import, Export, Plugin, Cloud, Asset, Project, Workspace, Custom), `JobPriority` (4 levels: Low, Normal, High, Critical), `JobState` (6 states: Created, Queued, Running, Completed, Failed, Cancelled) with inline string converters
+- `Job` — job unit: UUID, name, type, priority, state, progress (0-100), creation/start/end times, duration, error message, cancelable flag, user data pointer; non-copyable, movable
+- `JobQueue` — FIFO queue backed by `std::queue<unique_ptr<Job>>`: push, pop, front, empty, size, clear; priority stored but not used for scheduling in this sprint
+- `JobManager` — central manager: submit, cancel, process_next, process_all, running_jobs, completed_jobs, failed_jobs, statistics, clear; converts each Job into a Scheduler Task internally; connects to EventBus for lifecycle events
+- `JobStatistics` — cumulative stats: created, running, completed, failed, cancelled, total execution time
+
+**Integration:**
+
+- EventBus: 6 events (JobCreated, JobQueued, JobStarted, JobCompleted, JobFailed, JobCancelled)
+- Service Registry: JobManager registered as official service (ServiceType::JobManager)
+- Diagnostics: jobs_created, jobs_running, jobs_completed, jobs_failed, job_execution_time_ms shown in EngineStatistics and DiagnosticsManager reports
+- Public API: `submit_job()`, `cancel_job()`, `list_jobs()`, `job_statistics()`
+- ApiTypes: new `JobInfo`, `ApiJobStatistics`, `JobInfoList` types
+
+**Architecture:**
+
+```
+Application
+    |
+    v
+Public API (EngineAPI)
+    |
+    v
+JobManager (submit -> queue -> convert to Scheduler Task)
+    |
+    v
+JobQueue (FIFO) -> Job (metadata + state)
+    |
+    v
+Scheduler (existing, unchanged) -> Task (execution)
+    |
+    v
+EventBus (JobCreated / JobQueued / JobStarted / JobCompleted / JobFailed / JobCancelled)
+```
+
+**Backward compatibility:**
+- All sprints 1-20 fully functional
+- No modifications to existing Scheduler, ThreadPool, or any subsystem internals
+- Job System works on top of the existing Scheduler without replacing it
+
+---
+
 ## Sprint 20 — Plugin Loader Foundation (2026-07-05)
 
 Implemented the Plugin Loader Foundation for the LIZ Vision engine. A simulated

@@ -57,7 +57,12 @@ std::string EngineStatistics::to_string() const {
         << " plugins_loaded=" << plugins_loaded
         << " plugins_failed=" << plugins_failed
         << " plugins_reloaded=" << plugins_reloaded
-        << " plugin_load_time=" << plugin_load_time_ms << "ms";
+        << " plugin_load_time=" << plugin_load_time_ms << "ms"
+        << " jobs_created=" << jobs_created
+        << " jobs_running=" << jobs_running
+        << " jobs_completed=" << jobs_completed
+        << " jobs_failed=" << jobs_failed
+        << " job_exec_time=" << job_execution_time_ms << "ms";
     return oss.str();
 }
 

@@ -69,6 +69,13 @@ struct EngineStatistics {
     std::size_t plugins_reloaded      = 0;
     double     plugin_load_time_ms    = 0.0;
 
+    // -- Job System (Sprint 21) --
+    std::size_t jobs_created          = 0;
+    std::size_t jobs_running          = 0;
+    std::size_t jobs_completed        = 0;
+    std::size_t jobs_failed           = 0;
+    double     job_execution_time_ms  = 0.0;
+
     /// Generate a formatted summary string.
     std::string to_string() const;
 };

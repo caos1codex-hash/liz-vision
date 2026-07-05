@@ -438,3 +438,113 @@ api.unload_plugin(plugin_uuid);
 | `PluginUnloaded` | Plugin successfully unloaded |
 | `PluginReloaded` | Plugin reloaded (unload + load) |
 | `PluginLoadFailed` | Plugin load failed |
+
+## Job System
+
+The Job System provides a high-level abstraction for executing long-running
+operations (render, inference, import, export, cloud, plugins, pipelines,
+resources, projects, workspaces) through the existing Scheduler.
+
+Does NOT replace the Scheduler or ThreadPool — works on top of them.
+Each submitted Job is converted into a Scheduler Task for execution.
+
+### Job System Architecture
+
+```
+Application
+    |
+    v
+EngineAPI (submit_job, list_jobs, job_statistics)
+    |
+    v
+JobManager (submit -> queue -> convert to Scheduler Task)
+    |
+    v
+JobQueue (FIFO) -> Job (metadata + state)
+    |
+    v
+Scheduler (existing, unchanged) -> Task (execution)
+    |
+    v
+EventBus (JobCreated / JobQueued / JobStarted / JobCompleted / JobFailed / JobCancelled)
+```
+
+### Job System API (EngineAPI)
+
+| Method | Description |
+|--------|-------------|
+| `submit_job(name, type, info)` | Submit a job by name and type string; returns JobInfo |
+| `cancel_job(uuid)` | Cancel a queued job by UUID |
+| `list_jobs()` | List all processed jobs with their state and duration |
+| `job_statistics()` | Get job system statistics (created, running, completed, failed) |
+
+### Job System Example
+
+```cpp
+// Submit a job via the public API.
+liz::JobInfo info;
+api.submit_job("AI Upscaling", "Inference", info);
+// info.uuid, info.name, info.state -> "Queued"
+
+// Get job statistics.
+auto stats = api.job_statistics();
+// stats.jobs_created    -> total created
+// stats.jobs_running    -> currently running
+// stats.jobs_completed  -> completed
+// stats.jobs_failed     -> failed
+// stats.total_execution_time_ms -> total time
+
+// List all processed jobs.
+auto jobs = api.list_jobs();
+for (const auto& j : jobs) {
+    // j.uuid, j.name, j.type, j.priority, j.state
+    // j.progress (0-100), j.duration_ms
+}
+```
+
+### Job Types
+
+| Type | Description |
+|------|-------------|
+| `Render` | Frame rendering operations |
+| `Inference` | AI inference (upscaling, interpolation, etc.) |
+| `Pipeline` | Pipeline graph execution |
+| `Import` | File/resource import |
+| `Export` | File/resource export |
+| `Plugin` | Plugin loading/reloading |
+| `Cloud` | Cloud sync operations |
+| `Asset` | Asset management operations |
+| `Project` | Project operations |
+| `Workspace` | Workspace operations |
+| `Custom` | User-defined operations |
+
+### Job Priority Levels
+
+| Priority | Description |
+|----------|-------------|
+| `Low` | Background tasks |
+| `Normal` | Default priority |
+| `High` | Important tasks |
+| `Critical` | Time-sensitive tasks |
+
+### Job States
+
+| State | Description |
+|-------|-------------|
+| `Created` | Job created but not yet queued |
+| `Queued` | Job waiting in the FIFO queue |
+| `Running` | Job currently executing |
+| `Completed` | Job finished successfully (progress=100) |
+| `Failed` | Job finished with error |
+| `Cancelled` | Job cancelled before execution |
+
+### Job Lifecycle Events
+
+| Event | Description |
+|-------|-------------|
+| `JobCreated` | Job created |
+| `JobQueued` | Job added to queue |
+| `JobStarted` | Job started executing |
+| `JobCompleted` | Job finished successfully |
+| `JobFailed` | Job finished with error |
+| `JobCancelled` | Job cancelled |

@@ -86,6 +86,10 @@ add_library(liz-engine
     pluginloader/PluginCatalog.cpp
     pluginloader/PluginLoaderStatistics.cpp
     pluginloader/PluginLoader.cpp
+    jobs/Job.cpp
+    jobs/JobQueue.cpp
+    jobs/JobManager.cpp
+    jobs/JobStatistics.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)

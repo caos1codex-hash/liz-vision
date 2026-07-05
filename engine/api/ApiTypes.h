@@ -187,6 +187,29 @@ struct ApiPluginStatistics {
     std::string to_string() const;
 };
 
+/// Job information exposed through the public API.
+struct JobInfo {
+    std::string uuid;
+    std::string name;
+    std::string type;
+    std::string priority;
+    std::string state;
+    std::uint8_t progress = 0;
+    double     duration_ms = 0.0;
+};
+
+/// Job system statistics exposed through the public API.
+struct ApiJobStatistics {
+    std::size_t jobs_created    = 0;
+    std::size_t jobs_running    = 0;
+    std::size_t jobs_completed  = 0;
+    std::size_t jobs_failed     = 0;
+    double     total_execution_time_ms = 0.0;
+
+    /// Generate a formatted summary string.
+    std::string to_string() const;
+};
+
 /// List of service/asset infos returned by query methods.
 using ServiceInfoList = std::vector<ServiceInfo>;
 using AssetInfoList   = std::vector<AssetInfo>;
@@ -195,5 +218,6 @@ using ProjectInfoList = std::vector<ProjectInfo>;
 using WorkspaceInfoList = std::vector<WorkspaceInfo>;
 using CloudSyncInfoList = std::vector<CloudSyncInfo>;
 using PluginInfoList = std::vector<PluginInfo>;
+using JobInfoList = std::vector<JobInfo>;
 
 } // namespace liz

@@ -102,6 +102,11 @@ EngineStatistics DiagnosticsManager::statistics() const {
         stats.plugins_failed        = provider_->plugins_failed;
         stats.plugins_reloaded      = provider_->plugins_reloaded;
         stats.plugin_load_time_ms   = provider_->plugin_load_time_ms;
+        stats.jobs_created          = provider_->jobs_created;
+        stats.jobs_running          = provider_->jobs_running;
+        stats.jobs_completed        = provider_->jobs_completed;
+        stats.jobs_failed           = provider_->jobs_failed;
+        stats.job_execution_time_ms = provider_->job_execution_time_ms;
     }
 
     return stats;
@@ -145,6 +150,7 @@ void DiagnosticsManager::print_report() const {
     oss << "  Workspaces:    " << stats.active_workspace << " active (" << stats.loaded_workspaces << " loaded, " << stats.workspace_projects << " projects)" << std::endl;
     oss << "  Cloud:         " << stats.cloud_synced << " synced, " << stats.cloud_conflicts << " conflicts, " << stats.cloud_pending << " pending (" << std::fixed << std::setprecision(1) << stats.cloud_sync_time_ms << " ms)" << std::endl;
     oss << "  PluginLoader:   " << stats.plugins_loaded << " loaded, " << stats.plugins_failed << " failed, " << stats.plugins_reloaded << " reloaded (" << stats.plugin_load_time_ms << " ms)" << std::endl;
+    oss << "  JobSystem:       " << stats.jobs_created << " created, " << stats.jobs_completed << " completed, " << stats.jobs_failed << " failed (" << std::fixed << std::setprecision(1) << stats.job_execution_time_ms << " ms)" << std::endl;
 
     // Latest snapshot performance metrics.
     oss << std::endl;

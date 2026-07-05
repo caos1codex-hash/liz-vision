@@ -54,6 +54,12 @@ enum class EventType {
     CloudSyncCompleted,
     CloudSyncFailed,
     CloudConflictDetected,
+    JobCreated,
+    JobQueued,
+    JobStarted,
+    JobCompleted,
+    JobFailed,
+    JobCancelled,
     Custom
 };
 
@@ -105,6 +111,12 @@ inline const char* event_type_to_string(EventType type) {
         case EventType::CloudSyncCompleted:       return "CloudSyncCompleted";
         case EventType::CloudSyncFailed:          return "CloudSyncFailed";
         case EventType::CloudConflictDetected:     return "CloudConflictDetected";
+        case EventType::JobCreated:             return "JobCreated";
+        case EventType::JobQueued:              return "JobQueued";
+        case EventType::JobStarted:             return "JobStarted";
+        case EventType::JobCompleted:           return "JobCompleted";
+        case EventType::JobFailed:              return "JobFailed";
+        case EventType::JobCancelled:            return "JobCancelled";
         case EventType::Custom:                return "Custom";
     }
     return "Unknown";

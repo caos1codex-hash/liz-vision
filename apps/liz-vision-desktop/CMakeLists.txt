@@ -11,6 +11,7 @@ set(DEMO_SOURCES
     demo/Sprint18Demo.cpp
     demo/Sprint19Demo.cpp
     demo/Sprint20Demo.cpp
+    demo/Sprint21Demo.cpp
 )
 
 add_executable(liz-vision-desktop ${DEMO_SOURCES})
