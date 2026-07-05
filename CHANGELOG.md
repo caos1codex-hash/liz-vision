@@ -4,6 +4,57 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 20 — Plugin Loader Foundation (2026-07-05)
+
+Implemented the Plugin Loader Foundation for the LIZ Vision engine. A simulated
+plugin loading system — no real DLLs or shared libraries are loaded. Everything
+is in-memory, prepared for future dynamic loading without breaking the API.
+
+**New module:** `engine/pluginloader/`
+
+- `PluginDescriptor` — plugin metadata: UUID, name, author, version, description, category, API version, engine version, enabled/loaded state, load/unload timing; non-copyable, movable
+- `PluginManifest` — package manifest: name, version, author, website, license, description, dependencies, required engine version, API version
+- `PluginCatalog` — in-memory catalog: register/unregister/find/exists/list/count/statistics/clear; uses unordered_map for O(1) lookups
+- `PluginLoaderStatistics` — cumulative stats: registered, loaded, failed, reloaded, disabled, total load time
+- `PluginLoader` — central loader: register_plugin (from manifest), load/unload/reload/load_all/unload_all, EventBus events, simulated load timing
+
+**Integration:**
+
+- EventBus: 6 events (PluginLoading, PluginLoaded, PluginUnloading, PluginUnloaded, PluginReloaded, PluginLoadFailed)
+- Service Registry: PluginLoader registered as official service (ServiceType::PluginLoader)
+- Diagnostics: plugins_loaded, plugins_failed, plugins_reloaded, plugin_load_time_ms shown in EngineStatistics and DiagnosticsManager reports
+- Public API: `plugin_statistics()`, `list_plugins()`, `load_plugin()`, `reload_plugin()`, `unload_plugin()`
+- ApiTypes: new `PluginInfo`, `ApiPluginStatistics`, `PluginInfoList` types
+
+**Architecture:**
+
+```
+Application
+    |
+    v
+Public API (EngineAPI)
+    |
+    v
+PluginLoader (lifecycle: register → load → reload → unload)
+    |
+    v
+PluginCatalog (in-memory registry)
+    |
+    v
+PluginDescriptor (state + metadata)
+PluginManifest (package metadata)
+    |
+    v
+EventBus (PluginLoading / PluginLoaded / PluginReloaded / etc.)
+```
+
+**Backward compatibility:**
+- All sprints 1-19 fully functional
+- No modifications to GPU / Tensor / Pipeline / Asset / Project / Workspace / Cloud internals
+- PluginManager (existing from Sprint 1) remains untouched
+
+---
+
 ## Sprint 19 — Cloud Sync Foundation (2026-07-05)
 
 Implemented the Cloud Sync Foundation for the LIZ Vision engine. An

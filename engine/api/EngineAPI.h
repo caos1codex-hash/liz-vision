@@ -25,6 +25,7 @@ class PipelineGraph;
 class ProjectManager;
 class WorkspaceManager;
 class CloudSyncManager;
+class PluginLoader;
 
 /// Public API facade for the LIZ Engine.
 ///
@@ -183,6 +184,23 @@ public:
     /// List all processed cloud sync items.
     CloudSyncInfoList list_cloud_items() const;
 
+    // ── Plugin loader info ────────────────────────────────────────────
+
+    /// Get plugin loader statistics.
+    ApiPluginStatistics plugin_statistics() const;
+
+    /// List all registered plugins.
+    PluginInfoList list_plugins() const;
+
+    /// Load a plugin by UUID.
+    ApiResult load_plugin(const std::string& uuid);
+
+    /// Reload a plugin by UUID.
+    ApiResult reload_plugin(const std::string& uuid);
+
+    /// Unload a plugin by UUID.
+    ApiResult unload_plugin(const std::string& uuid);
+
 private:
     // Internal engine — never exposed.
     std::unique_ptr<Engine>                engine_;
@@ -195,6 +213,7 @@ private:
     std::unique_ptr<ProjectManager>            project_manager_;
     std::unique_ptr<WorkspaceManager>          workspace_manager_;
     std::unique_ptr<CloudSyncManager>          cloud_sync_manager_;
+    std::unique_ptr<PluginLoader>              plugin_loader_;
 
     // Public sessions.
     std::vector<std::unique_ptr<EngineSession>> sessions_;

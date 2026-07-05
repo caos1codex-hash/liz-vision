@@ -389,3 +389,52 @@ for (const auto& item : items) {
 | `Asset` | Asset file sync |
 | `Pipeline` | Pipeline graph sync |
 | `Settings` | Application settings sync |
+
+## Plugin Loader System
+
+The Plugin Loader provides a simulated plugin loading and management system.
+No real DLLs or shared libraries are loaded — everything is in-memory,
+prepared for future dynamic loading without breaking the API.
+
+### Plugin Loader API (EngineAPI)
+
+| Method | Description |
+|--------|-------------|
+| `plugin_statistics()` | Get plugin loader statistics (registered, loaded, failed, reloaded) |
+| `list_plugins()` | List all registered plugins with their state |
+| `load_plugin(uuid)` | Load a plugin by UUID |
+| `reload_plugin(uuid)` | Reload a plugin by UUID |
+| `unload_plugin(uuid)` | Unload a plugin by UUID |
+
+### Plugin Loader Example
+
+```cpp
+// Get plugin statistics.
+auto stats = api.plugin_statistics();
+// stats.plugins_registered -> total registered
+// stats.plugins_loaded     -> currently loaded
+// stats.plugins_failed     -> load failures
+// stats.plugins_reloaded   -> reloads performed
+
+// List all plugins.
+auto plugins = api.list_plugins();
+for (const auto& p : plugins) {
+    // p.uuid, p.name, p.author, p.version, p.category, p.state
+}
+
+// Load and unload plugins.
+api.load_plugin(plugin_uuid);
+api.reload_plugin(plugin_uuid);
+api.unload_plugin(plugin_uuid);
+```
+
+### Plugin Lifecycle Events
+
+| Event | Description |
+|-------|-------------|
+| `PluginLoading` | Plugin is being loaded |
+| `PluginLoaded` | Plugin successfully loaded |
+| `PluginUnloading` | Plugin is being unloaded |
+| `PluginUnloaded` | Plugin successfully unloaded |
+| `PluginReloaded` | Plugin reloaded (unload + load) |
+| `PluginLoadFailed` | Plugin load failed |

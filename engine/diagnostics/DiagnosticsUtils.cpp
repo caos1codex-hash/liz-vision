@@ -53,7 +53,11 @@ std::string EngineStatistics::to_string() const {
         << " cloud_pending=" << cloud_pending
         << " cloud_synced=" << cloud_synced
         << " cloud_conflicts=" << cloud_conflicts
-        << " cloud_sync_time=" << cloud_sync_time_ms << "ms";
+        << " cloud_sync_time=" << cloud_sync_time_ms << "ms"
+        << " plugins_loaded=" << plugins_loaded
+        << " plugins_failed=" << plugins_failed
+        << " plugins_reloaded=" << plugins_reloaded
+        << " plugin_load_time=" << plugin_load_time_ms << "ms";
     return oss.str();
 }
 

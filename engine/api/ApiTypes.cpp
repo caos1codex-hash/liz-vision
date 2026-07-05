@@ -61,4 +61,16 @@ std::string ApiCloudStatistics::to_string() const {
     return oss.str();
 }
 
+std::string ApiPluginStatistics::to_string() const {
+    std::ostringstream oss;
+    oss << "PluginStatistics{"
+        << "registered=" << plugins_registered
+        << ", loaded=" << plugins_loaded
+        << ", failed=" << plugins_failed
+        << ", reloaded=" << plugins_reloaded
+        << ", load_time=" << std::fixed << std::setprecision(1) << total_load_time_ms << "ms"
+        << "}";
+    return oss.str();
+}
+
 } // namespace liz

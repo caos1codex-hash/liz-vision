@@ -164,6 +164,29 @@ struct ApiCloudStatistics {
     std::string to_string() const;
 };
 
+/// Plugin information exposed through the public API.
+struct PluginInfo {
+    std::string uuid;
+    std::string name;
+    std::string author;
+    std::string version;
+    std::string category;
+    std::string state;
+    double     load_time_ms = 0.0;
+};
+
+/// Plugin loader statistics exposed through the public API.
+struct ApiPluginStatistics {
+    std::size_t plugins_registered = 0;
+    std::size_t plugins_loaded     = 0;
+    std::size_t plugins_failed     = 0;
+    std::size_t plugins_reloaded   = 0;
+    double     total_load_time_ms  = 0.0;
+
+    /// Generate a formatted summary string.
+    std::string to_string() const;
+};
+
 /// List of service/asset infos returned by query methods.
 using ServiceInfoList = std::vector<ServiceInfo>;
 using AssetInfoList   = std::vector<AssetInfo>;
@@ -171,5 +194,6 @@ using PipelineInfoList = std::vector<PipelineInfo>;
 using ProjectInfoList = std::vector<ProjectInfo>;
 using WorkspaceInfoList = std::vector<WorkspaceInfo>;
 using CloudSyncInfoList = std::vector<CloudSyncInfo>;
+using PluginInfoList = std::vector<PluginInfo>;
 
 } // namespace liz

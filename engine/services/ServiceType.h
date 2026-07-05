@@ -16,6 +16,7 @@ enum class ServiceType {
     Inference,
     Video,
     PluginManager,
+    PluginLoader,
     Performance,
     AssetManager,
     PipelineExecutor,
@@ -38,6 +39,7 @@ inline const char* service_type_to_string(ServiceType type) {
         case ServiceType::Inference:       return "Inference";
         case ServiceType::Video:           return "Video";
         case ServiceType::PluginManager:   return "PluginManager";
+        case ServiceType::PluginLoader:    return "PluginLoader";
         case ServiceType::Performance:    return "Performance";
         case ServiceType::AssetManager:    return "AssetManager";
         case ServiceType::PipelineExecutor: return "PipelineExecutor";

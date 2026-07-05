@@ -63,6 +63,12 @@ struct EngineStatistics {
     std::size_t cloud_conflicts   = 0;
     double     cloud_sync_time_ms = 0.0;
 
+    // -- Plugin Loader (Sprint 20) --
+    std::size_t plugins_loaded        = 0;
+    std::size_t plugins_failed        = 0;
+    std::size_t plugins_reloaded      = 0;
+    double     plugin_load_time_ms    = 0.0;
+
     /// Generate a formatted summary string.
     std::string to_string() const;
 };

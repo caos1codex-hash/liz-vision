@@ -23,6 +23,10 @@
 #include "engine/cloud/CloudSyncManager.h"
 #include "engine/cloud/CloudSyncItem.h"
 #include "engine/cloud/CloudTypes.h"
+#include "engine/pluginloader/PluginLoader.h"
+#include "engine/pluginloader/PluginDescriptor.h"
+#include "engine/pluginloader/PluginManifest.h"
+#include "engine/pluginloader/PluginLoaderStatistics.h"
 
 #include <algorithm>
 #include <chrono>
@@ -151,7 +155,17 @@ ApiResult EngineAPI::initialize(const EngineBuilder& config) {
 
     service_registry_->register_service("CloudSyncManager", ServiceType::CloudSyncManager, "1.0.0");
 
-    // 10. Create an implicit default session.
+    // 10. Create PluginLoader.
+    plugin_loader_ = std::make_unique<PluginLoader>();
+    plugin_loader_->initialize();
+
+    if (event_bus_) {
+        plugin_loader_->set_event_bus(event_bus_.get());
+    }
+
+    service_registry_->register_service("PluginLoader", ServiceType::PluginLoader, "1.0.0");
+
+    // 11. Create an implicit default session.
     SessionInfo default_session;
     create_session(default_session);
 
@@ -176,6 +190,11 @@ ApiResult EngineAPI::shutdown() {
     if (project_manager_) {
         project_manager_->shutdown();
         project_manager_.reset();
+    }
+
+    if (plugin_loader_) {
+        plugin_loader_->shutdown();
+        plugin_loader_.reset();
     }
 
     if (cloud_sync_manager_) {
@@ -792,6 +811,91 @@ CloudSyncInfoList EngineAPI::list_cloud_items() const {
     }
 
     return result;
+}
+
+// ── Plugin loader info ────────────────────────────────────────────
+
+ApiPluginStatistics EngineAPI::plugin_statistics() const {
+    ApiPluginStatistics stats;
+
+    if (!plugin_loader_) return stats;
+
+    auto pl_stats = plugin_loader_->statistics();
+    stats.plugins_registered = pl_stats.registered;
+    stats.plugins_loaded     = pl_stats.loaded;
+    stats.plugins_failed     = pl_stats.failed;
+    stats.plugins_reloaded   = pl_stats.reloaded;
+    stats.total_load_time_ms = pl_stats.total_load_time_ms;
+
+    return stats;
+}
+
+PluginInfoList EngineAPI::list_plugins() const {
+    PluginInfoList result;
+    if (!plugin_loader_) return result;
+
+    auto names = plugin_loader_->list_registered();
+    for (const auto& name : names) {
+        auto loaded = plugin_loader_->loaded_plugins();
+        for (const auto* desc : loaded) {
+            if (desc->name() == name) {
+                PluginInfo info;
+                info.uuid       = desc->uuid();
+                info.name       = desc->name();
+                info.author     = desc->author();
+                info.version    = desc->version();
+                info.category   = plugin_category_to_string(desc->category());
+                info.state      = desc->is_loaded() ? "Loaded" : "Registered";
+                info.load_time_ms = desc->load_time_ms();
+                result.push_back(info);
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
+ApiResult EngineAPI::load_plugin(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!plugin_loader_->load_plugin(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: plugin loaded — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::reload_plugin(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!plugin_loader_->reload_plugin(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: plugin reloaded — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::unload_plugin(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+
+    if (!plugin_loader_->unload_plugin(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: plugin unloaded — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
 }
 
 } // namespace liz

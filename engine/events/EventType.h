@@ -21,8 +21,12 @@ enum class EventType {
     InferenceFinished,
     GPUCommandSubmitted,
     GPUCommandCompleted,
+    PluginLoading,
     PluginLoaded,
+    PluginUnloading,
     PluginUnloaded,
+    PluginReloaded,
+    PluginLoadFailed,
     ExportStarted,
     ExportFinished,
     AssetCreated,
@@ -68,8 +72,12 @@ inline const char* event_type_to_string(EventType type) {
         case EventType::InferenceFinished:     return "InferenceFinished";
         case EventType::GPUCommandSubmitted:   return "GPUCommandSubmitted";
         case EventType::GPUCommandCompleted:   return "GPUCommandCompleted";
-        case EventType::PluginLoaded:          return "PluginLoaded";
-        case EventType::PluginUnloaded:        return "PluginUnloaded";
+        case EventType::PluginLoading:       return "PluginLoading";
+        case EventType::PluginLoaded:        return "PluginLoaded";
+        case EventType::PluginUnloading:     return "PluginUnloading";
+        case EventType::PluginUnloaded:       return "PluginUnloaded";
+        case EventType::PluginReloaded:      return "PluginReloaded";
+        case EventType::PluginLoadFailed:     return "PluginLoadFailed";
         case EventType::ExportStarted:         return "ExportStarted";
         case EventType::ExportFinished:        return "ExportFinished";
         case EventType::AssetCreated:          return "AssetCreated";
