@@ -90,6 +90,11 @@ add_library(liz-engine
     jobs/JobQueue.cpp
     jobs/JobManager.cpp
     jobs/JobStatistics.cpp
+    config/ConfigValue.cpp
+    config/ConfigSection.cpp
+    config/Configuration.cpp
+    config/ConfigurationManager.cpp
+    config/ConfigurationStatistics.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)

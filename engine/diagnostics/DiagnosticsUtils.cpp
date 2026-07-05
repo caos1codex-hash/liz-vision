@@ -62,7 +62,11 @@ std::string EngineStatistics::to_string() const {
         << " jobs_running=" << jobs_running
         << " jobs_completed=" << jobs_completed
         << " jobs_failed=" << jobs_failed
-        << " job_exec_time=" << job_execution_time_ms << "ms";
+        << " job_exec_time=" << job_execution_time_ms << "ms"
+        << " configs=" << configurations
+        << " config_sections=" << configuration_sections
+        << " config_values=" << configuration_values
+        << " config_modified=" << modified_configuration_values;
     return oss.str();
 }
 

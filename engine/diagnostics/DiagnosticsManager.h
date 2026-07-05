@@ -83,6 +83,12 @@ public:
     std::size_t jobs_completed        = 0;
     std::size_t jobs_failed           = 0;
     double     job_execution_time_ms  = 0.0;
+
+    // -- Configuration System (Sprint 22) --
+    std::size_t configurations        = 0;
+    std::size_t configuration_sections = 0;
+    std::size_t configuration_values  = 0;
+    std::size_t modified_configuration_values = 0;
 };
 
 /// Central diagnostics and profiling manager for the LIZ Vision engine.

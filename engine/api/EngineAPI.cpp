@@ -31,6 +31,10 @@
 #include "engine/jobs/JobTypes.h"
 #include "engine/jobs/Job.h"
 #include "engine/jobs/JobStatistics.h"
+#include "engine/config/ConfigurationManager.h"
+#include "engine/config/Configuration.h"
+#include "engine/config/ConfigurationStatistics.h"
+#include "engine/config/ConfigTypes.h"
 
 #include <algorithm>
 #include <chrono>
@@ -179,7 +183,17 @@ ApiResult EngineAPI::initialize(const EngineBuilder& config) {
 
     service_registry_->register_service("JobManager", ServiceType::JobManager, "1.0.0");
 
-    // 12. Create an implicit default session.
+    // 12. Create ConfigurationManager.
+    configuration_manager_ = std::make_unique<ConfigurationManager>();
+    configuration_manager_->initialize();
+
+    if (event_bus_) {
+        configuration_manager_->set_event_bus(event_bus_.get());
+    }
+
+    service_registry_->register_service("ConfigurationManager", ServiceType::ConfigurationManager, "1.0.0");
+
+    // 13. Create an implicit default session.
     SessionInfo default_session;
     create_session(default_session);
 
@@ -214,6 +228,11 @@ ApiResult EngineAPI::shutdown() {
     if (job_manager_) {
         job_manager_->shutdown();
         job_manager_.reset();
+    }
+
+    if (configuration_manager_) {
+        configuration_manager_->shutdown();
+        configuration_manager_.reset();
     }
 
     if (cloud_sync_manager_) {
@@ -1014,6 +1033,161 @@ ApiJobStatistics EngineAPI::job_statistics() const {
     stats.total_execution_time_ms = js.job_execution_time_ms;
 
     return stats;
+}
+
+// ── Configuration info ──────────────────────────────────────────
+
+ApiResult EngineAPI::create_configuration(const std::string& name, ConfigurationInfo& out_info) {
+    if (!initialized_) return ApiResult::Failed;
+    if (!configuration_manager_) return ApiResult::Failed;
+
+    auto* config = configuration_manager_->create_configuration(name);
+    if (!config) {
+        return ApiResult::AlreadyExists;
+    }
+
+    out_info.uuid        = config->uuid();
+    out_info.name        = config->name();
+    out_info.description = config->description();
+    out_info.active      = (configuration_manager_->active() == config);
+    out_info.sections    = config->section_count();
+    out_info.values      = config->total_values();
+    out_info.modified    = config->total_modified();
+
+    std::ostringstream oss;
+    oss << "EngineAPI: configuration created — name=" << name;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::destroy_configuration(const std::string& uuid) {
+    if (!initialized_) return ApiResult::Failed;
+    if (!configuration_manager_) return ApiResult::Failed;
+
+    if (!configuration_manager_->destroy_configuration(uuid)) {
+        return ApiResult::NotFound;
+    }
+
+    std::ostringstream oss;
+    oss << "EngineAPI: configuration destroyed — uuid=" << uuid;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::active_configuration(ConfigurationInfo& out_info) const {
+    if (!configuration_manager_) return ApiResult::Failed;
+
+    auto* config = configuration_manager_->active();
+    if (!config) {
+        return ApiResult::NotFound;
+    }
+
+    out_info.uuid        = config->uuid();
+    out_info.name        = config->name();
+    out_info.description = config->description();
+    out_info.active      = true;
+    out_info.sections    = config->section_count();
+    out_info.values      = config->total_values();
+    out_info.modified    = config->total_modified();
+
+    return ApiResult::Success;
+}
+
+ConfigurationInfoList EngineAPI::list_configurations() const {
+    ConfigurationInfoList result;
+    if (!configuration_manager_) return result;
+
+    auto uuids = configuration_manager_->list();
+    for (const auto& uuid : uuids) {
+        auto* config = configuration_manager_->find(uuid);
+        if (config) {
+            ConfigurationInfo info;
+            info.uuid        = config->uuid();
+            info.name        = config->name();
+            info.description = config->description();
+            info.active      = (configuration_manager_->active() == config);
+            info.sections    = config->section_count();
+            info.values      = config->total_values();
+            info.modified    = config->total_modified();
+            result.push_back(info);
+        }
+    }
+
+    return result;
+}
+
+ApiConfigurationStatistics EngineAPI::configuration_statistics() const {
+    ApiConfigurationStatistics stats;
+    if (!configuration_manager_) return stats;
+
+    auto cs = configuration_manager_->statistics();
+    stats.configurations = cs.created;
+    stats.active        = cs.active;
+    stats.sections      = cs.sections;
+    stats.values        = cs.values;
+    stats.modified      = cs.modified_values;
+
+    return stats;
+}
+
+ApiResult EngineAPI::set_value(const std::string& section, const std::string& key, const std::string& value) {
+    if (!initialized_) return ApiResult::Failed;
+    if (!configuration_manager_) return ApiResult::Failed;
+
+    auto* config = configuration_manager_->active();
+    if (!config) return ApiResult::NotFound;
+
+    auto* sec = config->find_section(section);
+    if (!sec) return ApiResult::NotFound;
+
+    auto* val = sec->find_mutable(key);
+    if (!val) return ApiResult::NotFound;
+
+    // Parse string value to the correct type.
+    if (val->type() == ConfigValueType::Bool) {
+        val->set_value(value == "true" || value == "1");
+    } else if (val->type() == ConfigValueType::Int) {
+        val->set_value(std::stoi(value));
+    } else if (val->type() == ConfigValueType::Double) {
+        val->set_value(std::stod(value));
+    } else {
+        val->set_value(value);
+    }
+
+    config->touch();
+
+    std::ostringstream oss;
+    oss << "EngineAPI: config value set — " << section << "/" << key << "=" << value;
+    LIZ_INFO(oss.str());
+
+    return ApiResult::Success;
+}
+
+std::string EngineAPI::get_value(const std::string& section, const std::string& key) const {
+    if (!configuration_manager_) return "";
+
+    auto* config = configuration_manager_->active();
+    if (!config) return "";
+
+    auto* sec = config->find_section(section);
+    if (!sec) return "";
+
+    auto* val = sec->find(key);
+    if (!val) return "";
+
+    std::ostringstream oss;
+    if (val->type() == ConfigValueType::Bool) {
+        oss << (val->as_bool() ? "true" : "false");
+    } else if (val->type() == ConfigValueType::Int) {
+        oss << val->as_int();
+    } else if (val->type() == ConfigValueType::Double) {
+        oss << val->as_double();
+    } else {
+        oss << val->as_string();
+    }
+    return oss.str();
 }
 
 } // namespace liz

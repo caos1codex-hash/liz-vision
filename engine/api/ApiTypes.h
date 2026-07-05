@@ -210,6 +210,29 @@ struct ApiJobStatistics {
     std::string to_string() const;
 };
 
+/// Configuration information exposed through the public API.
+struct ConfigurationInfo {
+    std::string uuid;
+    std::string name;
+    std::string description;
+    bool active = false;
+    std::size_t sections = 0;
+    std::size_t values = 0;
+    std::size_t modified = 0;
+};
+
+/// Configuration system statistics exposed through the public API.
+struct ApiConfigurationStatistics {
+    std::size_t configurations = 0;
+    std::size_t active        = 0;
+    std::size_t sections      = 0;
+    std::size_t values        = 0;
+    std::size_t modified      = 0;
+
+    /// Generate a formatted summary string.
+    std::string to_string() const;
+};
+
 /// List of service/asset infos returned by query methods.
 using ServiceInfoList = std::vector<ServiceInfo>;
 using AssetInfoList   = std::vector<AssetInfo>;
@@ -219,5 +242,6 @@ using WorkspaceInfoList = std::vector<WorkspaceInfo>;
 using CloudSyncInfoList = std::vector<CloudSyncInfo>;
 using PluginInfoList = std::vector<PluginInfo>;
 using JobInfoList = std::vector<JobInfo>;
+using ConfigurationInfoList = std::vector<ConfigurationInfo>;
 
 } // namespace liz

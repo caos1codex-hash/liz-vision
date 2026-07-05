@@ -60,6 +60,11 @@ enum class EventType {
     JobCompleted,
     JobFailed,
     JobCancelled,
+    ConfigurationCreated,
+    ConfigurationDestroyed,
+    ConfigurationActivated,
+    ConfigurationValueChanged,
+    ConfigurationReset,
     Custom
 };
 
@@ -117,6 +122,11 @@ inline const char* event_type_to_string(EventType type) {
         case EventType::JobCompleted:           return "JobCompleted";
         case EventType::JobFailed:              return "JobFailed";
         case EventType::JobCancelled:            return "JobCancelled";
+        case EventType::ConfigurationCreated:       return "ConfigurationCreated";
+        case EventType::ConfigurationDestroyed:     return "ConfigurationDestroyed";
+        case EventType::ConfigurationActivated:       return "ConfigurationActivated";
+        case EventType::ConfigurationValueChanged:  return "ConfigurationValueChanged";
+        case EventType::ConfigurationReset:          return "ConfigurationReset";
         case EventType::Custom:                return "Custom";
     }
     return "Unknown";

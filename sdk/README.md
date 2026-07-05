@@ -548,3 +548,95 @@ for (const auto& j : jobs) {
 | `JobCompleted` | Job finished successfully |
 | `JobFailed` | Job finished with error |
 | `JobCancelled` | Job cancelled |
+
+## Configuration System
+
+The Configuration System provides a fully in-memory configuration management system.
+No JSON, YAML, XML, or INI files are read or written — all configuration
+lives entirely in memory. This serves as the base for future persistence layers.
+
+### Configuration System Architecture
+
+```
+Application
+    |
+    v
+EngineAPI (create / destroy / set_value / get_value)
+    |
+    v
+ConfigurationManager (create / destroy / set_active)
+    |
+    v
+Configuration (UUID + sections + timestamps)
+    |
+    v
+ConfigSection (named group)
+    |
+    v
+ConfigValue (key + type + value + default + modified flag)
+    |
+    v
+EventBus (ConfigurationCreated / Destroyed / Activated / ValueChanged / Reset)
+```
+
+### Configuration System API (EngineAPI)
+
+| Method | Description |
+|--------|-------------|
+| `create_configuration(name, info)` | Create a new configuration profile |
+| `destroy_configuration(uuid)` | Destroy a configuration by UUID |
+| `active_configuration(info)` | Get the active configuration info |
+| `list_configurations()` | List all configurations |
+| `configuration_statistics()` | Get configuration system statistics |
+| `set_value(section, key, value)` | Set a config value (string representation) |
+| `get_value(section, key)` | Get a config value as string |
+
+### Configuration System Example
+
+```cpp
+// Create a configuration via the public API.
+liz::ConfigurationInfo info;
+api.create_configuration("Production", info);
+
+// Set values.
+api.set_value("Graphics", "width", "1920");
+api.set_value("Graphics", "height", "1080");
+api.set_value("Audio", "volume", "80");
+api.set_value("GPU", "backend", "CUDA");
+
+// Get values.
+std::string backend = api.get_value("GPU", "backend");
+// backend -> "CUDA"
+
+// Get statistics.
+auto stats = api.configuration_statistics();
+// stats.configurations -> total configs
+// stats.sections -> total sections
+// stats.values -> total values
+// stats.modified -> modified values
+
+// List all configurations.
+auto configs = api.list_configurations();
+for (const auto& c : configs) {
+    // c.uuid, c.name, c.active, c.sections, c.values, c.modified
+}
+```
+
+### Configuration Value Types
+
+| Type | Description |
+|------|-------------|
+| `Bool` | Boolean (true/false) |
+| `Int` | Integer |
+| `Double` | Floating point |
+| `String` | String value |
+
+### Configuration Lifecycle Events
+
+| Event | Description |
+|-------|-------------|
+| `ConfigurationCreated` | Configuration created |
+| `ConfigurationDestroyed` | Configuration destroyed |
+| `ConfigurationActivated` | Configuration set as active |
+| `ConfigurationValueChanged` | A value was modified |
+| `ConfigurationReset` | Values reset to defaults |

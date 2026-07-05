@@ -85,4 +85,16 @@ std::string ApiJobStatistics::to_string() const {
     return oss.str();
 }
 
+std::string ApiConfigurationStatistics::to_string() const {
+    std::ostringstream oss;
+    oss << "ConfigurationStatistics{"
+        << "configs=" << configurations
+        << ", active=" << active
+        << ", sections=" << sections
+        << ", values=" << values
+        << ", modified=" << modified
+        << "}";
+    return oss.str();
+}
+
 } // namespace liz

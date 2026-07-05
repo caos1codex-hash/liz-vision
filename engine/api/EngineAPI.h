@@ -27,6 +27,7 @@ class WorkspaceManager;
 class CloudSyncManager;
 class PluginLoader;
 class JobManager;
+class ConfigurationManager;
 
 /// Public API facade for the LIZ Engine.
 ///
@@ -216,6 +217,29 @@ public:
     /// Get job system statistics.
     ApiJobStatistics job_statistics() const;
 
+    // ── Configuration info ──────────────────────────────────────
+
+    /// Create a new configuration.
+    ApiResult create_configuration(const std::string& name, ConfigurationInfo& out_info);
+
+    /// Destroy a configuration by UUID.
+    ApiResult destroy_configuration(const std::string& uuid);
+
+    /// Get the active configuration info.  Returns NotFound if none.
+    ApiResult active_configuration(ConfigurationInfo& out_info) const;
+
+    /// List all configurations.
+    ConfigurationInfoList list_configurations() const;
+
+    /// Get configuration system statistics.
+    ApiConfigurationStatistics configuration_statistics() const;
+
+    /// Set a config value.  (section/key, string representation)
+    ApiResult set_value(const std::string& section, const std::string& key, const std::string& value);
+
+    /// Get a config value as string.  Returns empty if not found.
+    std::string get_value(const std::string& section, const std::string& key) const;
+
 private:
     // Internal engine — never exposed.
     std::unique_ptr<Engine>                engine_;
@@ -230,6 +254,7 @@ private:
     std::unique_ptr<CloudSyncManager>          cloud_sync_manager_;
     std::unique_ptr<PluginLoader>              plugin_loader_;
     std::unique_ptr<JobManager>                job_manager_;
+    std::unique_ptr<ConfigurationManager>      configuration_manager_;
 
     // Public sessions.
     std::vector<std::unique_ptr<EngineSession>> sessions_;

@@ -107,6 +107,10 @@ EngineStatistics DiagnosticsManager::statistics() const {
         stats.jobs_completed        = provider_->jobs_completed;
         stats.jobs_failed           = provider_->jobs_failed;
         stats.job_execution_time_ms = provider_->job_execution_time_ms;
+        stats.configurations        = provider_->configurations;
+        stats.configuration_sections = provider_->configuration_sections;
+        stats.configuration_values  = provider_->configuration_values;
+        stats.modified_configuration_values = provider_->modified_configuration_values;
     }
 
     return stats;
@@ -151,6 +155,7 @@ void DiagnosticsManager::print_report() const {
     oss << "  Cloud:         " << stats.cloud_synced << " synced, " << stats.cloud_conflicts << " conflicts, " << stats.cloud_pending << " pending (" << std::fixed << std::setprecision(1) << stats.cloud_sync_time_ms << " ms)" << std::endl;
     oss << "  PluginLoader:   " << stats.plugins_loaded << " loaded, " << stats.plugins_failed << " failed, " << stats.plugins_reloaded << " reloaded (" << stats.plugin_load_time_ms << " ms)" << std::endl;
     oss << "  JobSystem:       " << stats.jobs_created << " created, " << stats.jobs_completed << " completed, " << stats.jobs_failed << " failed (" << std::fixed << std::setprecision(1) << stats.job_execution_time_ms << " ms)" << std::endl;
+    oss << "  ConfigSystem:    " << stats.configurations << " configs, " << stats.configuration_sections << " sections, " << stats.configuration_values << " values (" << stats.modified_configuration_values << " modified)" << std::endl;
 
     // Latest snapshot performance metrics.
     oss << std::endl;

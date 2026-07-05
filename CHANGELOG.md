@@ -4,6 +4,61 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 22 — Configuration System Foundation (2026-07-05)
+
+Implemented the Configuration System Foundation for the LIZ Vision engine. A fully
+in-memory configuration system — no JSON, YAML, XML, or INI files. All
+configuration lives in memory only, serving as the base for future persistence
+layers.
+
+**New module:** `engine/config/`
+
+- `ConfigTypes` — enum `ConfigValueType` (4 types: Bool, Int, Double, String) with inline string converter
+- `ConfigValue` — configurable value: key, type, value (std::variant), default_value, description, modified flag; supports typed accessors (as_bool/as_int/as_double/as_string) and reset; non-copyable, movable
+- `ConfigSection` — groups values under a named section (Graphics, Audio, Engine, AI, GPU, etc.): add_value, remove_value, find, exists, list, count, modified_count
+- `Configuration` — complete configuration profile: UUID, name, description, list of sections, creation/modification timestamps; create_section, remove_section, find_section, list_sections, total_values, total_modified
+- `ConfigurationManager` — central manager: create_configuration, destroy_configuration, set_active, active, find, list, clear, statistics; EventBus integration for lifecycle events; auto-activates first config
+- `ConfigurationStatistics` — cumulative stats: created, destroyed, active, sections, values, modified_values
+
+**Integration:**
+
+- EventBus: 5 events (ConfigurationCreated, ConfigurationDestroyed, ConfigurationActivated, ConfigurationValueChanged, ConfigurationReset)
+- Service Registry: ConfigurationManager registered as official service (ServiceType::ConfigurationManager)
+- Diagnostics: configurations, configuration_sections, configuration_values, modified_configuration_values shown in EngineStatistics and DiagnosticsManager reports
+- Public API: `create_configuration()`, `destroy_configuration()`, `active_configuration()`, `list_configurations()`, `configuration_statistics()`, `set_value()`, `get_value()`
+- ApiTypes: new `ConfigurationInfo`, `ApiConfigurationStatistics`, `ConfigurationInfoList` types
+
+**Architecture:**
+
+```
+Application
+    |
+    v
+Public API (EngineAPI)
+    |
+    v
+ConfigurationManager (create / destroy / set_active)
+    |
+    v
+Configuration (UUID + sections + timestamps)
+    |
+    v
+ConfigSection (named group)
+    |
+    v
+ConfigValue (key + type + value + default + modified)
+    |
+    v
+EventBus (ConfigurationCreated / Destroyed / Activated / ValueChanged / Reset)
+```
+
+**Backward compatibility:**
+- All sprints 1-21 fully functional
+- No modifications to existing subsystems
+- Config module (engine/core/Config.h) from Sprint 1 remains untouched
+
+---
+
 ## Sprint 21 — Job System Foundation (2026-07-05)
 
 Implemented the Job System Foundation for the LIZ Vision engine. A high-level

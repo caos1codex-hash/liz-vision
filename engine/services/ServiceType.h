@@ -24,6 +24,7 @@ enum class ServiceType {
     WorkspaceManager,
     CloudSyncManager,
     JobManager,
+    ConfigurationManager,
     Unknown
 };
 
@@ -48,6 +49,7 @@ inline const char* service_type_to_string(ServiceType type) {
         case ServiceType::WorkspaceManager: return "WorkspaceManager";
         case ServiceType::CloudSyncManager: return "CloudSyncManager";
         case ServiceType::JobManager:     return "JobManager";
+        case ServiceType::ConfigurationManager: return "ConfigurationManager";
         case ServiceType::Unknown:         return "Unknown";
     }
     return "Unknown";
