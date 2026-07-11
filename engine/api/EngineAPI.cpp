@@ -32,6 +32,12 @@
 #include "engine/jobs/Job.h"
 #include "engine/jobs/JobStatistics.h"
 #include "engine/config/ConfigurationManager.h"
+#include "engine/config/AdvancedConfigurationManager.h"
+#include "engine/config/Configuration.h"
+#include "engine/config/ConfigSection.h"
+#include "engine/config/ConfigValue.h"
+#include "engine/config/ConfigSchema.h"
+#include "engine/config/ConfigurationProfile.h"
 #include "engine/config/Configuration.h"
 #include "engine/config/ConfigurationStatistics.h"
 #include "engine/config/ConfigTypes.h"
@@ -193,6 +199,16 @@ ApiResult EngineAPI::initialize(const EngineBuilder& config) {
 
     service_registry_->register_service("ConfigurationManager", ServiceType::ConfigurationManager, "1.0.0");
 
+    // 12-bis. Advanced Configuration System (Sprint 23) — wraps the Foundation
+    // ConfigurationManager above; reuses its service type deliberately (no new
+    // service is created, per the Advanced layer design rules).
+    advanced_configuration_manager_ = std::make_unique<AdvancedConfigurationManager>();
+    advanced_configuration_manager_->bind(configuration_manager_.get());
+    advanced_configuration_manager_->initialize();
+    if (event_bus_) {
+        advanced_configuration_manager_->set_event_bus(event_bus_.get());
+    }
+
     // 13. Create an implicit default session.
     SessionInfo default_session;
     create_session(default_session);
@@ -228,6 +244,11 @@ ApiResult EngineAPI::shutdown() {
     if (job_manager_) {
         job_manager_->shutdown();
         job_manager_.reset();
+    }
+
+    if (advanced_configuration_manager_) {
+        advanced_configuration_manager_->shutdown();
+        advanced_configuration_manager_.reset();
     }
 
     if (configuration_manager_) {
@@ -1188,6 +1209,129 @@ std::string EngineAPI::get_value(const std::string& section, const std::string& 
         oss << val->as_string();
     }
     return oss.str();
+}
+
+// ── Advanced Configuration (Sprint 23) ─────────────────────────────────────
+
+ApiResult EngineAPI::validate_configuration() {
+    if (!initialized_) return ApiResult::Failed;
+    if (!advanced_configuration_manager_) return ApiResult::Failed;
+
+    auto result = advanced_configuration_manager_->validate_active();
+    if (result.valid) {
+        return ApiResult::Success;
+    }
+    return ApiResult::Failed;
+}
+
+ConfigSchemaSummary EngineAPI::configuration_schema_summary() const {
+    ConfigSchemaSummary summary;
+    if (!advanced_configuration_manager_) return summary;
+
+    const auto& schema = advanced_configuration_manager_->schema();
+    summary.sections = schema.section_count();
+
+    std::size_t rules = 0;
+    for (const auto& sec_name : schema.list_sections()) {
+        const auto* sec = schema.find_section(sec_name);
+        if (sec) rules += sec->count();
+    }
+    summary.rules = rules;
+    return summary;
+}
+
+ApiResult EngineAPI::apply_config_override(const std::string& section,
+                                          const std::string& key,
+                                          const std::string& value) {
+    if (!initialized_) return ApiResult::Failed;
+    if (!advanced_configuration_manager_) return ApiResult::Failed;
+    if (!configuration_manager_) return ApiResult::Failed;
+
+    // Infer the target type from the active config (or default to String).
+    ConfigValue::ValueVariant variant_value = value;
+    if (auto* config = configuration_manager_->active()) {
+        if (auto* sec = config->find_section(section)) {
+            if (auto* val = sec->find(key)) {
+                if (val->type() == ConfigValueType::Bool) {
+                    variant_value = (value == "true" || value == "1");
+                } else if (val->type() == ConfigValueType::Int) {
+                    try { variant_value = std::stoi(value); }
+                    catch (...) { return ApiResult::InvalidArgument; }
+                } else if (val->type() == ConfigValueType::Double) {
+                    try { variant_value = std::stod(value); }
+                    catch (...) { return ApiResult::InvalidArgument; }
+                }
+            }
+        }
+    }
+
+    if (!advanced_configuration_manager_->apply_runtime_override(section, key, variant_value)) {
+        return ApiResult::Failed;
+    }
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::create_profiled_configuration(const std::string& name,
+                                                   const std::string& profile_name,
+                                                   const std::string& path,
+                                                   ConfigurationInfo& out_info) {
+    if (!initialized_) return ApiResult::Failed;
+    if (!advanced_configuration_manager_) return ApiResult::Failed;
+
+    ConfigurationProfile profile = configuration_profile_from_string(profile_name);
+    auto* cfg = advanced_configuration_manager_->create_profiled(name, profile, path);
+    if (!cfg) return ApiResult::Failed;
+
+    out_info.uuid        = cfg->uuid();
+    out_info.name        = cfg->name();
+    out_info.description = cfg->description();
+    out_info.active      = (configuration_manager_ && configuration_manager_->active() == cfg);
+    out_info.sections    = cfg->section_count();
+    out_info.values      = cfg->total_values();
+    out_info.modified    = cfg->total_modified();
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::activate_configuration_profile(const std::string& profile_name) {
+    if (!initialized_) return ApiResult::Failed;
+    if (!advanced_configuration_manager_) return ApiResult::Failed;
+
+    ConfigurationProfile profile = configuration_profile_from_string(profile_name);
+    if (!advanced_configuration_manager_->activate_profile(profile)) {
+        return ApiResult::NotFound;
+    }
+    return ApiResult::Success;
+}
+
+ApiResult EngineAPI::reload_configuration() {
+    if (!initialized_) return ApiResult::Failed;
+    if (!advanced_configuration_manager_) return ApiResult::Failed;
+
+    if (!advanced_configuration_manager_->reload_active()) {
+        return ApiResult::Failed;
+    }
+    return ApiResult::Success;
+}
+
+std::string EngineAPI::serialize_active_configuration() const {
+    if (!advanced_configuration_manager_) return "";
+    if (!configuration_manager_) return "";
+    auto* active = configuration_manager_->active();
+    if (!active) return "";
+    return advanced_configuration_manager_->serialize(active->uuid());
+}
+
+ApiAdvancedConfigurationStatistics EngineAPI::advanced_configuration_statistics() const {
+    ApiAdvancedConfigurationStatistics stats;
+    if (!advanced_configuration_manager_) return stats;
+
+    auto s = advanced_configuration_manager_->statistics();
+    stats.schema_validations  = s.schema_validations;
+    stats.reload_count        = s.reload_count;
+    stats.override_count      = s.override_count;
+    stats.profile_switches    = s.profile_switches;
+    stats.validation_failures = s.validation_failures;
+    return stats;
 }
 
 } // namespace liz

@@ -97,4 +97,23 @@ std::string ApiConfigurationStatistics::to_string() const {
     return oss.str();
 }
 
+std::string ApiAdvancedConfigurationStatistics::to_string() const {
+    std::ostringstream oss;
+    oss << "AdvancedConfigurationStatistics{"
+        << "schema_validations=" << schema_validations
+        << ", reload_count=" << reload_count
+        << ", override_count=" << override_count
+        << ", profile_switches=" << profile_switches
+        << ", validation_failures=" << validation_failures
+        << "}";
+    return oss.str();
+}
+
+std::string ConfigSchemaSummary::to_string() const {
+    std::ostringstream oss;
+    oss << "ConfigSchemaSummary{sections=" << sections
+        << ", rules=" << rules << "}";
+    return oss.str();
+}
+
 } // namespace liz

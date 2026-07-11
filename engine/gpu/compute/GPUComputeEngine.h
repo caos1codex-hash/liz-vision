@@ -9,7 +9,7 @@
 
 namespace liz {
 
-class Batch;  // forward declaration
+struct Batch;  // forward declaration (Batch is defined as struct in engine/gpu/batch/Batch.h)
 
 /// GPU compute orchestrator.
 ///

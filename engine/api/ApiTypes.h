@@ -233,6 +233,27 @@ struct ApiConfigurationStatistics {
     std::string to_string() const;
 };
 
+/// Advanced configuration statistics exposed through the public API.
+///
+/// Extends the Foundation statistics with the Sprint 23 Advanced counters.
+struct ApiAdvancedConfigurationStatistics {
+    std::size_t schema_validations  = 0;
+    std::size_t reload_count        = 0;
+    std::size_t override_count      = 0;
+    std::size_t profile_switches    = 0;
+    std::size_t validation_failures = 0;
+
+    /// Generate a formatted summary string.
+    std::string to_string() const;
+};
+
+/// Summary of a configuration schema (Advanced).
+struct ConfigSchemaSummary {
+    std::size_t sections = 0;
+    std::size_t rules    = 0;
+    std::string to_string() const;
+};
+
 /// List of service/asset infos returned by query methods.
 using ServiceInfoList = std::vector<ServiceInfo>;
 using AssetInfoList   = std::vector<AssetInfo>;

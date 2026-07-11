@@ -95,6 +95,12 @@ add_library(liz-engine
     config/Configuration.cpp
     config/ConfigurationManager.cpp
     config/ConfigurationStatistics.cpp
+    config/ConfigSchema.cpp
+    config/ConfigOverride.cpp
+    config/ConfigEnvironment.cpp
+    config/ConfigPersistence.cpp
+    config/ConfigReload.cpp
+    config/AdvancedConfigurationManager.cpp
 )
 target_include_directories(liz-engine PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_features(liz-engine PUBLIC cxx_std_20)

@@ -4,6 +4,95 @@ All notable changes to the LIZ Vision project are documented in this file.
 
 ---
 
+## Sprint 23 — Advanced Configuration System (2026-07-10)
+
+Designed an **Advanced Configuration layer built on top of the Sprint 22
+Foundation** — it composes (wraps) the existing `ConfigurationManager` and adds
+schema validation, execution profiles, environment overrides, runtime override
+priority, in-memory persistence, and dynamic reload. The Foundation module
+(`engine/config/`) is preserved unchanged; this sprint only *adds* files and
+*extends* existing ones in compatible ways (no API removed, no behavior changed).
+
+**New module files:** `engine/config/`
+
+- `ConfigSchema` — rule-based validation: per-key rules (required, min/max for
+  numbers, regex for strings, allowed-values enum, default) grouped into
+  schema sections; `validate(Configuration)` returns a `ConfigValidationResult`
+  with structured `{section,key,reason}` errors
+- `ConfigOverride` — `ConfigOverrideStack` with source-tagged overrides
+  (`SchemaDefault < Profile < Environment < Runtime`); `resolve()` returns the
+  highest-priority value for a `(section,key)`
+- `ConfigEnvironment` — reads `LIZ_<SECTION>_<KEY>` process environment
+  variables into `Environment`-source overrides
+- `ConfigPersistence` — serialize/deserialize a `Configuration` to/from a
+  lightweight INI-like text (in-memory or on-disk via path), no third-party deps
+- `ConfigReload` / `ConfigReloader` — reload an active configuration from its
+  bound file path and re-apply the override stack without restarting the engine
+- `ConfigurationProfile` — enum `Development / Production / Benchmark / Custom`
+  with string converters
+- `AdvancedConfigurationManager` — facade that wraps the Foundation
+  `ConfigurationManager` (composition, not inheritance): validates against the
+  schema, manages profiles, applies/resolves overrides, persists and reloads,
+  and publishes Sprint 23 events
+
+**Extensions (additive only — nothing existing removed):**
+
+- EventBus: 5 new `EventType` values — `ConfigSchemaValidated`,
+  `ConfigValidationFailed`, `ConfigReloaded`, `ConfigProfileActivated`,
+  `ConfigOverrideApplied` (with `event_type_to_string` cases)
+- `ConfigurationStatistics`: 5 new counters — `schema_validations`,
+  `reload_count`, `override_count`, `profile_switches`, `validation_failures`
+- Diagnostics (`DiagnosticsDataProvider` + `EngineStatistics`): new
+  `config_schema_validations`, `config_reload_count`, `config_override_count`,
+  `config_profile_switches`, `config_validation_failures` fields
+- Service Registry: `AdvancedConfigurationManager` is registered **reusing the
+  existing `ServiceType::ConfigurationManager`** — no new service type is
+  created (per the Sprint 23 design rule)
+- Public API: 8 new facade methods on `EngineAPI` —
+  `validate_configuration`, `configuration_schema_summary`,
+  `apply_config_override`, `create_profiled_configuration`,
+  `activate_configuration_profile`, `reload_configuration`,
+  `serialize_active_configuration`, `advanced_configuration_statistics`; new
+  `ApiAdvancedConfigurationStatistics` and `ConfigSchemaSummary` types in
+  `ApiTypes`. Foundation `EngineAPI` methods are unchanged.
+- Demo: new `Sprint23Demo` exercising base load, schema creation, valid
+  validation, invalid detection, runtime override, the Development → Production
+  → Benchmark profile switch, dynamic reload, and Diagnostics reporting, plus an
+  `EngineAPI` advanced facade block
+
+**Architecture (Advanced layer over Foundation):**
+
+```
+Application
+    |
+    v
+Public API (EngineAPI)  ── adds advanced facade methods
+    |
+    v
+AdvancedConfigurationManager  ── wraps (composition) ──>  ConfigurationManager (Sprint 22)
+    |                                                          |
+    ├── ConfigSchema / ConfigValidationResult                   └── Configuration (UUID + sections)
+    ├── ConfigOverrideStack  (priority resolution)
+    ├── ConfigEnvironment     (LIZ_* env vars)
+    ├── ConfigPersistence     (INI-like text)
+    └── ConfigReloader        (dynamic reload)
+```
+
+**Build:** new `.cpp` files appended to `engine/CMakeLists.txt` (`liz-engine`).
+
+**Portability corrections (enabling MSVC/Windows build, no behavior change):**
+`Logger.cpp` now uses `localtime_s` on `_WIN32` (keeps `localtime_r` elsewhere);
+`GPUComputeEngine.h` forward-declares `struct Batch;` (was `class Batch;`) since
+`Batch` is defined as a `struct` — MSVC mangling distinguishes `class`/`struct`
+where GCC/Clang do not. Both fixes preserve existing semantics and APIs.
+
+**Verification:** clean build with `cmake -G "Visual Studio 17 2022" -A x64`
+(MSVC 19.44, C++20); all 11 demos (Legacy + Sprint 14–23) run with exit code 0,
+no crashes; new EventBus events confirmed, new Diagnostics counters populated,
+`ConfigurationManager` remains the single configuration service.
+
+---
+
 ## Sprint 22 — Configuration System Foundation (2026-07-05)
 
 Implemented the Configuration System Foundation for the LIZ Vision engine. A fully

@@ -31,7 +31,12 @@ void Logger::log(LogLevel level,
     std::timespec ts{};
     std::timespec_get(&ts, TIME_UTC);
     std::tm tm_buf{};
+#if defined(_WIN32)
+    // MSVC/Win32 has no localtime_r; localtime_s has reversed argument order.
+    localtime_s(&tm_buf, &ts.tv_sec);
+#else
     localtime_r(&ts.tv_sec, &tm_buf);
+#endif
 
     char time_str[32];
     std::strftime(time_str, sizeof(time_str), "%H:%M:%S", &tm_buf);

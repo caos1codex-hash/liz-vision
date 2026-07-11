@@ -89,6 +89,13 @@ public:
     std::size_t configuration_sections = 0;
     std::size_t configuration_values  = 0;
     std::size_t modified_configuration_values = 0;
+
+    // -- Advanced Configuration (Sprint 23) --
+    std::size_t config_schema_validations  = 0;
+    std::size_t config_reload_count        = 0;
+    std::size_t config_override_count      = 0;
+    std::size_t config_profile_switches    = 0;
+    std::size_t config_validation_failures = 0;
 };
 
 /// Central diagnostics and profiling manager for the LIZ Vision engine.

@@ -640,3 +640,98 @@ for (const auto& c : configs) {
 | `ConfigurationActivated` | Configuration set as active |
 | `ConfigurationValueChanged` | A value was modified |
 | `ConfigurationReset` | Values reset to defaults |
+
+## Advanced Configuration System (Sprint 23)
+
+The Advanced Configuration System is a layer built **on top of the Sprint 22
+Configuration Foundation**. It does not replace the Foundation — it wraps the
+existing `ConfigurationManager` and adds schema validation, execution profiles,
+environment overrides, runtime override priority, in-memory persistence, and
+dynamic reload. All Foundation APIs above continue to work unchanged.
+
+### Advanced Configuration Architecture
+
+```
+Application
+    |
+    v
+EngineAPI (validate / override / profile / reload / advanced stats)
+    |
+    v
+AdvancedConfigurationManager  ── wraps (composition) ──>  ConfigurationManager (Sprint 22)
+    |
+    ├── ConfigSchema            (rules + validate)
+    ├── ConfigOverrideStack     (priority resolution: SchemaDefault < Profile < Environment < Runtime)
+    ├── ConfigEnvironment       (LIZ_<SECTION>_<KEY> env vars)
+    ├── ConfigPersistence        (INI-like text serialize/deserialize)
+    └── ConfigReloader          (reload from bound file path)
+```
+
+### Advanced Configuration API (EngineAPI)
+
+| Method | Description |
+|--------|-------------|
+| `validate_configuration()` | Validate the active configuration against the schema |
+| `configuration_schema_summary()` | Get a `ConfigSchemaSummary` (section + rule counts) |
+| `apply_config_override(section, key, value)` | Apply a runtime override (highest priority) |
+| `create_profiled_configuration(name, profile, path, info)` | Create a config bound to an execution profile |
+| `activate_configuration_profile(profile)` | Activate the configuration bound to a profile |
+| `reload_configuration()` | Reload the active configuration from its bound file path |
+| `serialize_active_configuration()` | Serialize the active configuration to text |
+| `advanced_configuration_statistics()` | Get the advanced counters |
+
+### Advanced Configuration Example
+
+```cpp
+// Create a configuration tagged with an execution profile and a file path.
+liz::ConfigurationInfo info;
+api.create_profiled_configuration("Engine", "Production", "engine.cfg", info);
+
+// Apply a runtime override (highest priority; wins over profile/env/default).
+api.apply_config_override("GPU", "memory_mb", "8192");
+
+// Validate the active configuration against the configured schema.
+if (api.validate_configuration() == liz::ApiResult::Success) {
+    // configuration conforms to schema
+}
+
+// Switch profiles without restarting the engine.
+api.activate_configuration_profile("Benchmark");
+
+// Reload the active configuration from its file path (dynamic reload).
+api.reload_configuration();
+
+// Advanced statistics.
+auto a = api.advanced_configuration_statistics();
+// a.schema_validations, a.reload_count, a.override_count,
+// a.profile_switches, a.validation_failures
+```
+
+### Execution Profiles
+
+| Profile | Description |
+|---------|-------------|
+| `Development` | Ergonomic defaults for local development |
+| `Production` | Safe, conservative settings for production |
+| `Benchmark` | Throughput-oriented settings for benchmarking |
+| `Custom` | User-defined profile |
+
+### Override Sources (by priority, highest first)
+
+| Source | Description |
+|--------|-------------|
+| `Runtime` | Explicit override applied via `apply_config_override` |
+| `Environment` | `LIZ_<SECTION>_<KEY>` process variables |
+| `Profile` | Values contributed by the activated profile |
+| `SchemaDefault` | Fallback default declared in the schema rule |
+
+### Advanced Configuration Events
+
+| Event | Description |
+|-------|-------------|
+| `ConfigSchemaValidated` | A configuration passed schema validation |
+| `ConfigValidationFailed` | A configuration failed schema validation |
+| `ConfigReloaded` | A configuration was reloaded from its source |
+| `ConfigProfileActivated` | A profile-bound configuration was activated |
+| `ConfigOverrideApplied` | A runtime override was applied |
+

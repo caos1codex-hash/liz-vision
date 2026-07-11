@@ -13,6 +13,11 @@ std::string ConfigurationStatistics::to_string() const {
         << ", sections=" << sections
         << ", values=" << values
         << ", modified=" << modified_values
+        << ", schema_validations=" << schema_validations
+        << ", reload_count=" << reload_count
+        << ", override_count=" << override_count
+        << ", profile_switches=" << profile_switches
+        << ", validation_failures=" << validation_failures
         << "}";
     return oss.str();
 }

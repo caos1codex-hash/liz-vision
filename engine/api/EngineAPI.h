@@ -28,6 +28,7 @@ class CloudSyncManager;
 class PluginLoader;
 class JobManager;
 class ConfigurationManager;
+class AdvancedConfigurationManager;
 
 /// Public API facade for the LIZ Engine.
 ///
@@ -240,6 +241,41 @@ public:
     /// Get a config value as string.  Returns empty if not found.
     std::string get_value(const std::string& section, const std::string& key) const;
 
+    // ── Advanced Configuration (Sprint 23) ──────────────────────────
+    //
+    // These methods extend (do not replace) the Foundation configuration
+    // API above. They are safe no-ops (return Failed) when the advanced
+    // layer is not initialized.
+
+    /// Validate the active configuration against the schema.
+    ApiResult validate_configuration();
+
+    /// Get a summary of the registered schema.
+    ConfigSchemaSummary configuration_schema_summary() const;
+
+    /// Apply a runtime override (highest priority) to a config value.
+    ApiResult apply_config_override(const std::string& section,
+                                    const std::string& key,
+                                    const std::string& value);
+
+    /// Create a configuration tagged with an execution profile.
+    ApiResult create_profiled_configuration(const std::string& name,
+                                            const std::string& profile_name,
+                                            const std::string& path,
+                                            ConfigurationInfo& out_info);
+
+    /// Activate the configuration bound to the given profile name.
+    ApiResult activate_configuration_profile(const std::string& profile_name);
+
+    /// Reload the active configuration from its bound file path.
+    ApiResult reload_configuration();
+
+    /// Serialize the active configuration to text (in-memory).
+    std::string serialize_active_configuration() const;
+
+    /// Advanced configuration statistics.
+    ApiAdvancedConfigurationStatistics advanced_configuration_statistics() const;
+
 private:
     // Internal engine — never exposed.
     std::unique_ptr<Engine>                engine_;
@@ -255,6 +291,7 @@ private:
     std::unique_ptr<PluginLoader>              plugin_loader_;
     std::unique_ptr<JobManager>                job_manager_;
     std::unique_ptr<ConfigurationManager>      configuration_manager_;
+    std::unique_ptr<AdvancedConfigurationManager> advanced_configuration_manager_;
 
     // Public sessions.
     std::vector<std::unique_ptr<EngineSession>> sessions_;

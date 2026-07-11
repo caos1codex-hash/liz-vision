@@ -65,6 +65,12 @@ enum class EventType {
     ConfigurationActivated,
     ConfigurationValueChanged,
     ConfigurationReset,
+    // -- Advanced Configuration (Sprint 23) --
+    ConfigSchemaValidated,
+    ConfigValidationFailed,
+    ConfigReloaded,
+    ConfigProfileActivated,
+    ConfigOverrideApplied,
     Custom
 };
 
@@ -127,6 +133,11 @@ inline const char* event_type_to_string(EventType type) {
         case EventType::ConfigurationActivated:       return "ConfigurationActivated";
         case EventType::ConfigurationValueChanged:  return "ConfigurationValueChanged";
         case EventType::ConfigurationReset:          return "ConfigurationReset";
+        case EventType::ConfigSchemaValidated:       return "ConfigSchemaValidated";
+        case EventType::ConfigValidationFailed:       return "ConfigValidationFailed";
+        case EventType::ConfigReloaded:             return "ConfigReloaded";
+        case EventType::ConfigProfileActivated:      return "ConfigProfileActivated";
+        case EventType::ConfigOverrideApplied:       return "ConfigOverrideApplied";
         case EventType::Custom:                return "Custom";
     }
     return "Unknown";
